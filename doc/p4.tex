@@ -1,0 +1,13 @@
+\section{Phase IV: Real-Time Security}
+
+In Phase III, we described a mechanism for users to detect sigchain corruptions after-the-fact. For instance, an attacker adds a new device onto Alice's sigchain to gain access to her meeting without triggering a ``new device'' warning. The meeting happens and the attacker gleans the secret. Alice can detect the attack after the fact, since the attacker had to commit the malicious change to Alice's sigchain for the attack to work, but we can do better.
+
+We dub a final refinement to this proposal: ``real-time security,'' meaning Alice can prevent unauthorized device additions from happening in the first place. Users whose identities are vouched for by their SSO provider already have good protections here, since the $\idp$ and Zoom would have to be colluding to authorize a new device. We extend similar protections to other uses in this phase.
+
+In Phase IV, we propose an upgrade to user device provisioning. Users can login to new devices as before: via SSO, OAuth, or simple username and password. Recall from above that new devices get two or three signatures: a self signature, a signature from Zoom, and one from the $\idp$ if available.
+
+Further validations of the device are possible. Users can sign new devices with existing devices, potentially through a QR-code-based flow similar to the one Keybase has now. One device shows a QR code of a random session key, and the other scans the QR code; this establishes an end-to-end secure tunnel between the two devices that a compromised server cannot interfere with. Over this tunnel, devices can exchange public keys and cross-sign each other.
+
+Alternatively, organizations can set up policies that require an IT administrator to sign off on device additions. The new user device can display the hash of its public key in QR code form. The IT administrator can scan it, singing the new device with their administrator's signing key.
+
+In this phase, devices with just two signatures can appear ``degraded.'' These degraded devices will trigger warnings in the UI, or would be excluded from meetings marked ``high security.''

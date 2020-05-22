@@ -1,0 +1,76 @@
+\documentclass[11pt]{article}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{1em}
+
+\usepackage{amsmath}
+\usepackage{authblk}
+\usepackage{fancyhdr}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{mdwlist}
+\usepackage{ragged2e}
+\usepackage{titlesec}
+\usepackage{verbatim}
+
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{\footnotesize CC BY-SA 4.0}
+\lhead{\footnotesize\raisebox{1.25pt}{\fontsize{7}{7}\textcopyright}\hspace{2pt}Zoom Video Communications, Inc.}
+\lfoot{\footnotesize E2E Encryption for Zoom Meetings}
+\rfoot{\footnotesize Page \thepage}
+
+\include{macros}
+\geometry{top=1in,bottom=1in}
+\hypersetup{
+    colorlinks,
+    citecolor=black,
+    filecolor=black,
+    linkcolor=black,
+    urlcolor=black
+}
+
+\titlespacing*{\section}{0pt}{6ex}{2ex}
+\titlespacing*{\subsection}{0pt}{3ex}{1ex}
+\titlespacing*{\subsubsection}{0pt}{1ex}{0ex}
+
+\title{E2E Encryption for Zoom Meetings}
+
+\author[1]{\small Josh~Blum}
+\author[1]{\small Simon~Booth}
+\author[1]{\small Oded~Gal}
+\author[1]{\small Maxwell~Krohn}
+\author[1]{\small Karan~Lyons}
+\author[1]{\small Antonio~Marcedone}
+\author[1]{\small Mike~Maxim}
+\author[1]{\small Merry~Ember~Mou}
+\author[1]{\small Jack~O'Connor}
+\author[1]{\small Miles~Steele}
+
+\author[2]{\small Matthew~Green}
+\author[  \hspace{-1ex}]{\small Lea~Kissner}
+\author[3]{\small Alex~Stamos}
+
+\affil[1]{\footnotesize Zoom~Video~Communications}
+\affil[2]{\footnotesize Johns~Hopkins~University}
+\affil[3]{\footnotesize Stanford~University}
+
+\date{May 22, 2020 \\ \small Version 1}
+
+\begin{document}
+    \maketitle
+    \thispagestyle{fancy}
+    \pagenumbering{arabic}
+    \renewcommand{\thesection}{\arabic{section}} 
+    \renewcommand{\thesubsection}{\thesection.\arabic{subsection}}
+    \input{1_introduction}
+    \newpage
+    \input{2_roadmap}
+    \input{p1_1}
+    \input{p1_2}
+    \input{p2}
+    \input{p3}
+    \input{p4}
+    \input{7_conclusion}
+    \pagebreak
+    \input{references}
+\end{document}

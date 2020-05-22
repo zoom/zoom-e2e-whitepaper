@@ -1,0 +1,100 @@
+\newcommand{\true}{\mathsf{true}}
+\newcommand{\false}{\mathsf{false}}
+
+\newcommand{\pk}{\mathit{pk}}
+\newcommand{\sk}{\mathit{sk}}
+
+\newcommand{\keygen}{\ensuremath{\mathsf{KeyGen}}}
+
+\newcommand{\enc}{\ensuremath{\mathsf{Enc}}}
+\newcommand{\dec}{\ensuremath{\mathsf{Dec}}}
+\newcommand{\sign}{\ensuremath{\mathsf{Sign}}}
+\newcommand{\verify}{\ensuremath{\mathsf{Verify}}}
+
+\newcommand{\vk}{\mathit{vk}}
+
+\newcommand{\eddsa}{EdDSA}
+\newcommand{\ecdsa}{ECDSA}
+\newcommand{\dualsign}{DualSign}
+\newcommand{\cbox}{Box}
+
+\newcommand{\vkeddsa}{\vk_{{\sf \eddsa}}}
+\newcommand{\skeddsa}{\sk_{{\sf \eddsa}}}
+\newcommand{\signatureeddsa}{{\sf Sig}_{{\sf \eddsa}}}
+\newcommand{\eddsakeygen}{{\sf \eddsa}.\keygen}
+\newcommand{\eddsasign}{{\sf \eddsa}.\sign}
+\newcommand{\eddsaverify}{{\sf \eddsa}.\verify}
+
+\newcommand{\sig}{{\sf Sig}}
+
+\newcommand{\vkecdsa}{\vk_{{\sf \ecdsa}}}
+\newcommand{\skecdsa}{\sk_{{\sf \ecdsa}}}
+\newcommand{\signatureecdsa}{{\sf Sig}_{{\sf \ecdsa}}}
+\newcommand{\ecdsakeygen}{{\sf \ecdsa}.\keygen}
+\newcommand{\ecdsasign}{{\sf \ecdsa}.\sign}
+\newcommand{\ecdsaverify}{{\sf \ecdsa}.\verify}
+
+\newcommand{\vkdualsign}{\vk_{{\sf \dualsign}}}
+\newcommand{\skdualsign}{\sk_{{\sf \dualsign}}}
+\newcommand{\signaturedualsign}{{\sf Sig}_{{\sf \dualsign}}}
+\newcommand{\dualsignkeygen}{{\sf \dualsign}.\keygen}
+\newcommand{\dualsignsign}{{\sf \dualsign}.\sign}
+\newcommand{\dualsignverify}{{\sf \dualsign}.\verify}
+
+\newcommand{\genedkeypair}{{\sf GenCurve25519Keypair}}
+\newcommand{\genfipskeypair}{{\sf GenFIPSKeypair}}
+\newcommand{\pkfips}{\pk_{\sf FIPS}}
+\newcommand{\skfips}{\sk_{\sf FIPS}}
+\newcommand{\pked}{\pk_{\sf 25519}}
+\newcommand{\sked}{\sk_{\sf 25519}}
+
+\newcommand{\dhfunced}{{\sf DH}_{\sf 25519}}
+\newcommand{\dhfuncfips}{{\sf DH}_{\sf FIPS}}
+
+\newcommand{\pkbox}{\pk_{{\sf \cbox}}}
+\newcommand{\skbox}{\sk_{{\sf \cbox}}}
+\newcommand{\ciphertext}{C}
+\newcommand{\cboxkeygen}{{\sf \cbox}.\keygen}
+\newcommand{\cboxencrypt}{{\sf \cbox}.\enc}
+\newcommand{\cboxdecrypt}{{\sf \cbox}.\dec}
+
+\newcommand{\pkboxR}{\pkbox^{\sf R}}
+\newcommand{\skboxS}{\skbox^{\sf S}}
+\newcommand{\pkedR}{\pked^{\sf R}}
+\newcommand{\skedS}{\sked^{\sf S}}
+\newcommand{\pkfipsR}{\pkfips^{\sf R}}
+\newcommand{\skfipsS}{\skfips^{\sf S}}
+\newcommand{\pkboxS}{\pkbox^{\sf S}}
+\newcommand{\skboxR}{\skbox^{\sf R}}
+\newcommand{\pkedS}{\pked^{\sf S}}
+\newcommand{\skedR}{\sked^{\sf R}}
+\newcommand{\pkfipsS}{\pkfips^{\sf S}}
+\newcommand{\skfipsR}{\skfips^{\sf R}}
+
+\newcommand{\aesgcmenc}{{\sf AES\mbox{-}GCM\mbox{-}ENC}}
+\newcommand{\aesgcmdec}{{\sf AES\mbox{-}GCM\mbox{-}DEC}}
+
+\newcommand{\sharedsecretfips}{SS_{\sf FIPS}}
+\newcommand{\sharedsecreted}{SS_{\sf 25519}}
+\newcommand{\metadata}{{\sf Meta}}
+
+\newcommand{\HKDF}{{\sf HKDF}}
+\newcommand{\meetingID}{{\sf meetingID}}
+\newcommand{\meetingUUID}{{\sf meetingUUID}}
+\newcommand{\deviceid}{{\sf deviceID}}
+\newcommand{\randomNonce}{{\sf RandomNonce}}
+\newcommand{\LL}{\ell}
+\newcommand{\binding}{{\sf binding}}
+
+\newcommand{\ivk}{\mathit{IVK}}
+\newcommand{\isk}{\mathit{ISK}}
+
+\newcommand{\participantList}{I}
+\newcommand{\mk}{\mathit{mk}}
+\newcommand{\MK}{{\sf MK}}
+\newcommand{\LPL}{\mathit{LPL}}
+\newcommand{\mkSequenceNumber}{\mathsf{mkSeqNum}}
+\newcommand{\identitySigchainTail}{\mathsf{identitySigchainTail}}
+\newcommand{\meetingStatus}{\mathsf{meetingStatus}}
+\newcommand{\userID}{\mathsf{userID}}
+\newcommand{\idp}{\mathrm{IDP}}

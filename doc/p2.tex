@@ -1,0 +1,104 @@
+\section{Phase II: Identity}
+
+In Phase II, we will start introducing the concept of identity and use it to guarantee that only authorized participants will be able to join a meeting. Meeting leaders will have more helpful information when evaluating join requests and deciding to kick questionable users out of the meeting. We build up the necessary machinery to securely expose identity information to clients.
+
+\subsection{Building an Identity}
+
+First we cover building up an identity, and then we discuss how it's used in the UI.
+
+\subsubsection{Provisioning}
+
+When a user first logs in on a new device, or first upgrades a device to new Zoom software, their client generates a statement binding the user's identity to the device's public key. For users who sign into Zoom directly or via OAuth, these data consist of email and organization (if not a personal account). For those who authenticate via SSO identity providers, this data will also include identity information the $\idp$ provides. Several signatures accompany this binding:
+
+\begin{enumerate*}
+	\item {\bf Always:} A signature by Zoom's servers.
+	\item {\bf If Applicable:} a signature by the user's SSO $\idp$, made in a way that Zoom's server doesn't proxy the signature request. The data provided in the identity provider's signature must match the data in the identity statement, and verifying clients must check correspondence.
+	\item {\bf Always:} A self-signature with the user's current key.
+	\item {\bf Starting in Phase IV:} A signature by one of the user's previously authenticated devices.
+\end{enumerate*}
+
+The signatures should happen in this order, and later signatures should be computed over the statement body and previous signatures.
+
+The client uploads the statement and accompanying signatures to Zoom's servers, which can relay these statements later when users join meetings.
+
+\subsubsection{Revoking Devices}
+
+When a user uninstalls Zoom on a device, or erases, throws away, or loses a device, they should sign a statement saying that the device is revoked. This way, if anyone shows up later using this device, other meeting participants can cast a suspicious eye.
+
+The revoke statement simply says that a public key corresponding to a previously provisioned Zoom device is no longer valid. The same signatures as above apply, but any currently valid user device can issue ``self-signature'', not just the device being revoked.
+
+When a user revokes a device, they do not invalidate all signatures made by the device prior to the revocation. Rather, they prevent the device from making signatures going forward. This simple plan does not cover the case in which Alice lost her device 2 weeks ago, realizes today, and wants to revoke all the signatures made in the interim. To cover that case, we might eventually include a mechanism to revoke individual signatures.
+
+\subsubsection{Signature Chains}
+
+A user makes many signatures pertaining to their identity; one for each device provisioned, and one for each device revoked. As such, these signatures comprise a natural sequence of events, and clients should have protections against malicious servers reordering them or omitting them (especially in the case of revocations).
+
+Hence, the signed statements for a given user each contains a monotonically increasing sequence number. In addition, each signed statement will contain a hash of the statement with the previous sequence number. These hashes bind the statements related to the same identity to each other, forming a ``hash chain'' of signed statements which we refer to as a \textit{sigchain}.
+
+The server coordinates previous hashes and sequence numbering at this phase in the proposal. Users on SSOs have reasonable guarantees that malicious servers aren't corrupting this process, since they have independent signatures on their chain links. Users without SSOs don't get that additional protection, but we will add better sequencing guarantees in Phase III.
+
+
+\subsubsection{Hiding Personal Details}
+
+An important point to cover here is that the statements themselves must be structured in a way that they can be selectively deleted in the future without preventing the whole statement from passing a signature verification. It's best to build up an intuition here by example. Consider a statement of the form:
+
+\begingroup{}
+\fontsize{10pt}{12pt}\selectfont{}
+\begin{verbatim}
+{
+  "userID": "ebc0d2ecd5b761c2d873c34e15c1dc8c6eb6904432557c0605e465b7bf5265",
+  "deviceName": "Jane’s iPhone 11 Pro",
+  "publicKey": "f27768d032c8578ff759309a09b1ffa1f623b2bc58f",
+  "sequenceNumber": 10,
+  "prev": "484ad7913d81ce856455d6de94e79896ad4731713ebb0580f051cc2cce1d14ae"
+}
+\end{verbatim}
+\endgroup{}
+
+Imagine Jane later regrets the fact she named her device the way she did. She can revoke the device, but the various signatures computed over this statement should still be verifiable for auditing Jane's account. A simple cryptographic commitment can satisfy all of these requirements. Jane's statement instead should be of the form:
+
+% TODO: I couldn't format HMAC(r, m) nicely inside of verbatim. -KL
+\begingroup{}
+\fontsize{10pt}{12pt}\selectfont{}
+\begin{verbatim}
+{
+  "userIDg: "ebc0d2ecd5b761c2d873c34e15c1dc8c6eb6904432557c0605e465b7bf5265",
+  "deviceName": HMAC(r, "Jane’s iPhone 11 Pro"),
+  "publicKey": "f27768d032c8578ff759309a09b1ffa1f623b2bc58f",
+  "sequenceNumber": 10,
+  "prev": "484ad7913d81ce856455d6de94e79896ad4731713ebb0580f051cc2cce1d14ae"
+}
+\end{verbatim}
+\endgroup{}
+
+Where $\mathrm{r}$ is a random 32-byte value, and the value \texttt{"Jane’s iPhone 11 Pro"} is stored on Zoom's servers (in plaintext). When Jane wants this information to be available, the server makes $\mathrm{r}$ and \texttt{"Jane’s iPhone 11 Pro"} known. When she revokes the statement, the server throws away $\mathrm{r}$ and the associated plaintext. Hence, the statement is still verifiable, and the \texttt{publicKey} is still knowable, even after Jane revokes the statement and hides the personal details. Furthermore, these commitments allow Zoom to make these details selectively available. She can see her own device names on her settings screens, while other users examining her identity cannot. But all can verify her signature over the committed data.
+
+In the rest of this document, we hide this design detail, but it's an important one for designing a secure, privacy-preserving system with immutable building blocks like signatures.
+
+\subsubsection{Signed Contact List Updates}
+
+Whenever Alice completes a meeting with Bob and Charlie, she should make a note of their public keys and the states of their identity, so she can flag if they later show up on new (potentially faked) devices. She should also make a note of whether they were kicked out of the meeting.
+
+After leaving a meeting or a meeting ends, a user constructs a list of mappings for every user in the group:
+
+\[
+\langle \userID \; \rightarrow \; ( \identitySigchainTail, \meetingStatus ) \rangle
+\]
+
+Where $\identitySigchainTail$ is the tail of the user's sigchain that describes their identity and devices, and the $\meetingStatus$ contains  information about whether or not the user was evicted from the meeting, as well as how long the users were in the same meeting together, and how many other users were also participating. There might not be much to glean from a very large meeting, or a meeting in which two users only overlapped for a short time. The user signs this statement with their current device.
+
+As above, these meeting status updates constitute a sigchain, so users can securely port this data across devices. This particular sigchain will grow large since it updates after every meeting. It should employ compression and checkpointing, so that users don't have to download and replay lots of data on their devices.
+
+\subsection{User Interface}
+
+This phase of the proposal includes some new UI features. First, a user's client will receive notifications about any new devices added to their account.
+
+Device list management is now backed by the user's sigchain. The Zoom client will highlight the device additions and removals that have been authorized with user signatures (versus any that predate the system). In this view, users will also be able to trigger a signed device revocation. A device that knows it's being revoked should delete all private ephemeral and long-term keys, then log the user out.
+
+Other changes are visible wherever users are displayed, primarily in the meeting screen, in the participants list, and in the waiting room. For users who use an identity provider to vouch for their identity (such as SSOs), the UI can show the identity that their $\idp$ has vouched for. And recall, these identities are signed by the $\idp$, and therefore Zoom cannot tamper with them.
+
+For any two users Alice and Bob, Alice's client can put a note on Bob's in-meeting profile if Alice doesn't recognize Bob's keys (recall from above that Alice is now keeping a record of Bob's public keys). From Alice's perspective, if any user in her meeting is joining using a public key that she doesn't recognize, the whole meeting gets a label to that effect, and a security interface displays which users are joining the meeting using new keys. Those new keys may be a result of Bob using a new device, of having reinstalled the application on a previous device, or of an attacker proxying and snooping on Bob's connection. So this indicator is not a security alarm but rather an indication that Alice and Bob may wish to check each other's meeting security code, as described in Phase I.
+
+\subsection{Areas to Improve in Phase II}
+
+One area to improve when moving beyond Phase II might be alert fatigue, since we don't have a good way to distinguish between Bob legitimately adding a new device and a malicious server inserting one on Bob's behalf, though this is significantly less noisy than in Phase I. Furthermore, a malicious server could potentially return an outdated or inconsistent view user sigchains. There is some protection against arbitrary server behavior in that users cross-sign each other's sigchains when they update their contact lists, but we can do better.
