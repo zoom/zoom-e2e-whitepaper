@@ -155,7 +155,7 @@ To verify a signature:
 
 \vspace{-1.5em}
 \begin{enumerate*}
-\item Parse $\vkdualsign$ as $\left( (\vkeddsa,\vkecdsa), (\skeddsa,\skecdsa) \right)$.
+\item Parse $\vkdualsign$ as $(\vkeddsa,\vkecdsa)$.
 \item Parse $\signaturedualsign$ as $\left( M, \signatureeddsa, \signatureecdsa) \right)$.
 \item Compute $r_1 \leftarrow \eddsaverify(\vkeddsa, M, \signatureeddsa)$.
 \item Compute $r_2 \leftarrow \ecdsaverify(\vkecdsa, M, \signatureecdsa)$.
