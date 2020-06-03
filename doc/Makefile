@@ -6,3 +6,4 @@ all:
 	latex main
 	latex main
 	dvips main
+	ps2pdf main.ps
