@@ -15,7 +15,7 @@
 
 \newcommand{\eddsa}{EdDSA}
 \newcommand{\ecdsa}{ECDSA}
-\newcommand{\dualsign}{DualSign}
+\newcommand{\zoomsign}{Sign}
 \newcommand{\cbox}{Box}
 
 \newcommand{\vkeddsa}{\vk_{{\sf \eddsa}}}
@@ -24,6 +24,7 @@
 \newcommand{\eddsakeygen}{{\sf \eddsa}.\keygen}
 \newcommand{\eddsasign}{{\sf \eddsa}.\sign}
 \newcommand{\eddsaverify}{{\sf \eddsa}.\verify}
+\newcommand{\errorSym}{{\sf error}}
 
 \newcommand{\sig}{{\sf Sig}}
 
@@ -34,12 +35,12 @@
 \newcommand{\ecdsasign}{{\sf \ecdsa}.\sign}
 \newcommand{\ecdsaverify}{{\sf \ecdsa}.\verify}
 
-\newcommand{\vkdualsign}{\vk_{{\sf \dualsign}}}
-\newcommand{\skdualsign}{\sk_{{\sf \dualsign}}}
-\newcommand{\signaturedualsign}{{\sf Sig}_{{\sf \dualsign}}}
-\newcommand{\dualsignkeygen}{{\sf \dualsign}.\keygen}
-\newcommand{\dualsignsign}{{\sf \dualsign}.\sign}
-\newcommand{\dualsignverify}{{\sf \dualsign}.\verify}
+\newcommand{\vkzoomsign}{\vk}
+\newcommand{\skzoomsign}{\sk}
+\newcommand{\signaturezoomsign}{{\sf Sig}}
+\newcommand{\zoomsignkeygen}{{\sf \zoomsign}.\keygen}
+\newcommand{\zoomsignsign}{{\sf \zoomsign}.\sign}
+\newcommand{\zoomsignverify}{{\sf \zoomsign}.\verify}
 
 \newcommand{\genedkeypair}{{\sf GenCurve25519Keypair}}
 \newcommand{\genfipskeypair}{{\sf GenFIPSKeypair}}
@@ -75,7 +76,7 @@
 \newcommand{\aesgcmdec}{{\sf AES\mbox{-}GCM\mbox{-}DEC}}
 
 \newcommand{\sharedsecretfips}{SS_{\sf FIPS}}
-\newcommand{\sharedsecreted}{SS_{\sf 25519}}
+\newcommand{\sharedsecreted}{SS}
 \newcommand{\metadata}{{\sf Meta}}
 
 \newcommand{\HKDF}{{\sf HKDF}}
@@ -98,3 +99,4 @@
 \newcommand{\meetingStatus}{\mathsf{meetingStatus}}
 \newcommand{\userID}{\mathsf{userID}}
 \newcommand{\idp}{\mathrm{IDP}}
+\newcommand{\sodium}{\texttt{libsodium}}

@@ -2,7 +2,7 @@
 
 In the third phase, we will expand the authentication guarantees to ensure that all Zoom users have a consistent view of each others' devices and keys.
 
-Imagine an insider, Mallory, who wants to eavesdrop on a meeting between honest users Alice and Bob, who have never interacted on Zoom before and haven't checked the meeting security code. To succeed in this attack, Mallory could instruct the Zoom server to lie to Alice about Bob's keys and to Bob about Alice's keys, replacing them with keys she controls. If Bob's client is the only one to see the fake key for Alice, and similarly Alice's is the only client who gets the fake key for Bob, then such an attack would be hard to detect after the fact.
+Imagine an insider, Mallory, who wants to eavesdrop on a meeting between honest users Alice and Bob, who have never interacted on Zoom before and haven't checked the meeting leader security code. To succeed in this attack, Mallory could instruct the Zoom server to lie to Alice about Bob's keys and to Bob about Alice's keys, replacing them with keys she controls. If Bob's client is the only one to see the fake key for Alice, and similarly Alice's is the only client who gets the fake key for Bob, then such an attack would be hard to detect after the fact.
 
 Some possible countermeasures for such attacks require trusted external entities or manual validation steps (such as checking security codes, as introduced in Phase I) that potentially have to be performed out-of-band. Instead, our plan detects equivocation by the Zoom servers and identity providers while minimizing active checking by the user.
 
