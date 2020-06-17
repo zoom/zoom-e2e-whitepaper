@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 - Local key storage design section.
 - More detail about join/leave protocol security properties.
-- An addition author: Julia Len
+- An additional author: Julia Len
 - Definitional footnote for "deep fakes"
 
 ### Changed
