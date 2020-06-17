@@ -145,7 +145,7 @@ To decrypt:
 \RaggedRight
 \begin{enumerate*}
 \item Parse $\ciphertext$ as $(C', \randomNonce)$.
-\item Compute $K \leftarrow \texttt{crypto\_box\_beforenm}(\pkboxR, \skboxS)$.
+\item Compute $K \leftarrow \texttt{crypto\_box\_beforenm}(\pkboxS, \skboxR)$.
 \item Compute $K' \leftarrow \HKDF(K, \metadata)$.
 \item Compute $M \leftarrow \texttt{crypto\_box\_open\_afternm}(C', \randomNonce, K')$. If decryption fails, output $\errorSym$. Otherwise output $M$.
 \end{enumerate*}
