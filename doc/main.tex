@@ -3,6 +3,9 @@
 \setlength{\parskip}{1em}
 
 \usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{amssymb}
+\usepackage{bbm}
 \usepackage{authblk}
 \usepackage{fancyhdr}
 \usepackage{geometry}
@@ -11,6 +14,14 @@
 \usepackage{ragged2e}
 \usepackage{titlesec}
 \usepackage{verbatim}
+\usepackage{xspace}
+\usepackage{graphicx}
+\usepackage{pgf}
+\usepackage{tikz}
+\usepackage{multicol}
+\usetikzlibrary{arrows}
+\usetikzlibrary{shapes.geometric}
+\usepackage{float}
 
 \pagestyle{fancy}
 \fancyhf{}
@@ -55,13 +66,13 @@
 \affil[2]{\footnotesize Johns~Hopkins~University}
 \affil[3]{\footnotesize Stanford~University}
 
-\date{June 17, 2020 \\ \small Version 2}
+\date{October 14, 2020 \\ \small Version 2.3}
 
 \begin{document}
     \maketitle
     \thispagestyle{fancy}
     \pagenumbering{arabic}
-    \renewcommand{\thesection}{\arabic{section}} 
+    \renewcommand{\thesection}{\arabic{section}}
     \renewcommand{\thesubsection}{\thesection.\arabic{subsection}}
     \input{1_introduction}
     \newpage
@@ -74,4 +85,7 @@
     \input{7_conclusion}
     \pagebreak
     \input{references}
+    \newpage
+    \appendix
+    \input{a_releases}
 \end{document}

@@ -1,11 +1,10 @@
+TEX = pdflatex -shell-escape -interaction=nonstopmode -file-line-error
 
 all:
-	latex main
-	latex main
+	$(TEX) main.tex
+	$(TEX) main.tex
 	bibtex main
-	latex main
-	latex main
-	dvips main
-	ps2pdf main.ps
-	cp main.pdf ../zoom_e2e_v2.pdf
-	cp main.pdf ../zoom_e2e.pdf
+	$(TEX) main.tex
+	$(TEX) main.tex
+clean:
+	rm -f *aux *blg *log *bbl *dvi *pdf *synctex.gz *.toc *out

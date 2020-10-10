@@ -1,25 +1,39 @@
 \subsubsection{Key Rotation}
 
-At any point later in the meeting, the leader can generate a new 32-byte value $\mk'$. The leader performs steps \ref{participantJoinRekeyStart}-\ref{participantJoinRekeyEnd} of ``Participant Join (Leader)'' for all participants, with the updated $\mk'$ value. All participants see the rekey signal on their signaling channel, and perform steps \ref{participantJoinRekeyNonLeaderStart}-\ref{participantJoinRekeyNonLeaderEnd} of ``Participant Join (Non-Leader)''.  Participants should not immediately encrypt using the new meeting key; they should wait about 15 seconds, to ensure all participants smoothly transition over.
+At any point later in the meeting, the leader can generate a new 32-byte value $\mk'$. The leader performs steps \ref{participantJoinRekeyStart}-\ref{participantJoinRekeyEnd} of ``Participant Join (Leader)'' for all participants, with the updated $\mk'$ value. All participants see the rekey signal on their signaling channel, and perform step \ref{participantJoinRekeyNonLeader} of ``Participant Join (Non-Leader)''.  Participants should not immediately encrypt using the new meeting key; they should wait about 2 seconds, to ensure all participants smoothly transition over.
 
 The leader should trigger a rekey whenever a participant enters or leaves the meeting, but not more than every 15 seconds (to prevent thrashing). As an important security measure, users joining the meeting never get to see keys that are more than 15 seconds old, since otherwise they could view encrypted in-meeting chats deep into the meeting's past. But likewise this rekeying strategy shouldn't delay a user from joining a meeting.
 
 It's important to note each $\mk$ is independently generated, so knowing the previous $\mk$ provides no information about the subsequent $\mk'$.
 
-Each $\mk$ has an associated sequence number $\mkSequenceNumber$, starting at 0 and incrementing whenever it rolls over. The leader sends this sequence number along with the participant list heartbeat below.
+Each $\mk$ has an associated sequence number $\mkSequenceNumber$, starting at 1 and incrementing whenever it rolls over. The leader sends this sequence number along with the participant list heartbeat below.
 
-\subsubsection{Authenticated Participant Lists}
+\subsubsection{Leader Participant List}
 
-A meeting leader maintains a ``leader participant list'' ($\LPL$), tabulating
-all users they have added to and removed from the meeting. Every time this list changes, the leader increments the counter $v$ and posts the mapping $\langle v \rightarrow \LPL_v \rangle$ to the bulletin board. They broadcast a signature over this list whenever membership changes, and at designated ``heartbeat intervals'':
+A meeting leader maintains a ``leader participant list'' ($\LPL$) tabulating all the users in the meeting. For each user currently in the meeting, the $\LPL$ keeps track of a hash over their $\binding_i$, which includes their $\ivk_i$, $pk_i$, $\userID$, and $\deviceid$, as well as their display name. For users who have left the meeting, the $\LPL$ tracks only their $\ivk_i$, $\userID$, $\deviceid$, and display name.
+
+The $\LPL$ is used to drive the participant list in the user interface, which records both users
+currently in the meeting and those who have left. For implementation reasons, we rely on the MMRs to
+provide the display names for people who are currently participating in the meeting, and on the
+$\LPL$ for people who have left the meeting. It is possible that race conditions during leader
+changes (caused by a bad network or a malicious server) could prevent some meeting participants from
+being reflected reflected in the ``left'' section of the participant list.
+
+The $\LPL$ is represented as a sequence of operations such as adding a user to the meeting, or noting when a user has left. Every time there is such an operation, the leader increments a counter $v$ representing the total number of operations and signs over a data structure (called a \textit{link}) containing the counter, the hash of the previous link, and the current operation. If there are more than 20 links in the chain, the leader can coalesce all of the previous links into a smaller number of links. The old links are then deleted in order to save space.
+
+Leaders post a signature over the latest link to the bulletin board whenever membership changes, and broadcast it over the signalling channel at designated ``heartbeat intervals'':
 %
 \begin{align*}
-\zoomsignsign \left(\isk_{\LL}, (\texttt{"Zoom00LPL\textbackslash0"} \| \binding_{\LL} \| \mathsf{SHA256}(\LPL_v) \| v \| t \| \mkSequenceNumber ) \right)
+\zoomsignsign \left(\isk_{\LL}, \context, (\binding_{\LL} \| \mathsf{SHA256}(\LPL_v) \| v \| t \| \mkSequenceNumber ) \right)
 \end{align*}
 %
-Where $t$ increments on every send, $v$ increments whenever the $\LPL$ changes, and $\mkSequenceNumber$ increments on every $\mk$ rotation.
+Where $\context$ is $\texttt{"Zoombase1-ClientOnly-Sig-Leader\-Participant\-List"}$, $t$ increments on every send, $v$ increments whenever the $\LPL$ changes, and $\mkSequenceNumber$ increments on every $\mk$ rotation.
 
-The other participants should know this list, so they know who to rekey for if the leader drops out and they become the new leader. Evil servers might try to withhold updates the leader makes here, to hide when bad actors are kicked out. As such, the leader also sends a low bandwidth ``heartbeat'' over the control channel. Heartbeats should go out at least every 10 seconds. All participants observe and verify these heartbeats, and if they fail to receive four heartbeats in a row, they should drop out of the meeting.
+By replaying the sequence of operations in the bulletin board, the other participants can reconstruct the current list of participants, so they know who to rekey for if the leader drops out and they become the new leader. Evil servers might try to withhold updates the leader makes here, to hide when bad actors are kicked out. As such, the leader also sends a low bandwidth ``heartbeat'' over the signalling channel. Heartbeats should go out at least every 10 seconds. All participants observe and verify these heartbeats, and if they fail to receive ten heartbeats in a row, they should drop out of the meeting.
+
+When a leader does drop out of a meeting, the Zoom server picks a new leader arbitrarily and sends a signal to participants indicating that the leader has changed. The new leader then coalesces the chain as described above, and other participants verify that the new leader is present in the new $\LPL$.
+
+For users in the meeting, clients remember the mapping between $(\userID, \deviceid)$ and the hash over the corresponding $\binding_i$, and ensure that the hash remains stable across new links and leader changes. If a user leaves the meeting, it is enforced that any user who rejoins with the same $\userID$ and $\deviceid$ must have the same $\ivk_i$, but not necessarily the same $\pk_i$. These guarantees persist only over the course of a single meeting.
 
 \subsubsection{Meeting Teardown}
 At the end of the meeting, or when leaving a meeting early, all participants should discard all meeting keys, all keys derived from those meeting keys, and the ephemeral DH private keys $\sk_i$ they generated when they joined.
@@ -27,30 +41,72 @@ At the end of the meeting, or when leaving a meeting early, all participants sho
 The intent here is to provide forward secrecy. That is, if an adversary can record all encrypted messages relayed between Zoom clients during the meeting, and can later recover all keys stored on a user's device after the meeting ends, they still cannot recover the meeting data.
 
 \subsection{Meeting Leader Security Code}
-If all participants can verify the authenticity of the leader's public key ($\ivk_{\LL}$), they are safe from ``meddler-in-the-middle attacks'' (MITM)\footnote{``Meddler-in-the-middle attack'' is also known as ``man-in-the-middle attack''.}. The Zoom client exposes the following ``meeting leader security code'' in the security tab:
+If all participants can verify the authenticity of the leader's public key ($\ivk_{\LL}$), they are safe from ``meddler-in-the-middle attacks'' (MitM)\footnote{``Meddler-in-the-middle attack'' is also known as ``man-in-the-middle attack''.}. The Zoom client exposes the following ``meeting leader security code'' in the security tab:
 
-$$\mathsf{Wordify}(\mathsf{Hash128}(\texttt{"Zoom00MSecCode\textbackslash0"} || \ivk_{\LL}))$$
+$$\mathsf{Digits}(\SHATWO(\SHATWO(\texttt{"Zoombase-1-ClientOnly-MAC-SecurityCode"}) || \SHATWO(\ivk_{\LL})))$$
 
-$\mathsf{Hash128}$ is a standard hash function like SHA-256, but truncated to 128 bits. The $\mathsf{Wordify}$ function converts a binary hash to a human-readable and internationalization-friendly code. Crucially, every Zoom client in the meeting independently computes these values on the $\ivk_{\LL}$ used in the handshake protocol. The length of the code is long enough to protect against second pre-image attacks. The leader reads out the meeting leader security code, and everyone in the meeting in turn does the same thing. If the code does not match, the participant should speak up in the meeting, and the leader should rotate the meeting key by kicking them out; they may be allowed to rejoin and try again.
+$\mathsf{Digits}$ extracts a string of 39 decimal digits from a SHA-256 hash, representing just over 129 bits of information. This representation is more human-readable and more internationalizable than the full hexadecimal hash. Crucially, every Zoom client in the meeting independently computes these codes from the $\ivk_{\LL}$ used in the handshake protocol. The length of the code is long enough to protect against second pre-image attacks. The leader reads out the meeting leader security code, and everyone in the meeting in turn does the same thing. If the code does not match, the participant should speak up in the meeting, and the leader should rotate the meeting key by kicking them out; they may be allowed to rejoin and try again.
 
 If deep fake technology\footnote{We use ``deep fakes'' to refer to manipulated and/or fabricated audio/video data that uses synthetic media techniques to replace the likeness of one person with another. Using a ``deep fake'' (especially in real-time) of a meeting participant could potentially deceive others about the identity of that participant.} is a concern, or the participants do not know each other in advance, this verification can also happen over a different out-of-band secure channel.
+
+Non-leader participants see a notification prompting them to re-perform the security code checks
+whenever the meeting leader changes. These additional checks prevent a compromised Zoom server from
+changing the meeting leader over the course of a meeting without being detected.
 
 We considered other approaches to the meeting leader security code, such as mixing more of the handshake data into the displayed code. While more mixins would be more robust to attacks that try to confuse participants by mixing members from different meetings, we see a UX advantage of ``one leader, one code.''
 
 \subsection{Changes to symmetric encryption}
 Symmetric encryption in Zoom meetings will use AES-GCM with unique per-stream keys. As in the current design, all keys will be derived using a secure key derivation function (KDF) from a per-meeting Meeting Key ($\MK$). The meeting leader may rotate $\MK$ throughout the meeting.
 
-All encrypted UDP packets are prefaced with the bottom 8 bits of $\mkSequenceNumber$, so participants know which version of $\MK$ to decrypt with. Wrapping is not a security concern, since users can trust the participant list heartbeats for the full $\mkSequenceNumber$.
+All encrypted UDP packets are prefaced with the 4-byte $\mkSequenceNumber$, so participants know which version of $\MK$ to decrypt with.
 
 \subsection{Security Properties}
 \label{subsec:secprop}
-The Identity Management System, Bulletin Board and Signaling Channel as enumerated in Section~\ref{subsec:comp} are deployed by Zoom, and protect against Outsiders using TLS. Attackers classified as Insiders by our threat model could monitor or meddle with these components. An Insider monitoring such components (a passive attack) would expose meeting metadata, which is stated as a limitation of the design in Section~\ref{subsec:limit}.
+The Identity Management System, Bulletin Board and Signaling Channel as enumerated in
+Section~\ref{subsec:comp} are deployed by Zoom, and protect against Outsiders using TLS. Attackers
+classified as Insiders by our threat model could monitor or meddle with these components. An Insider
+monitoring such components (a passive attack) would expose meeting metadata, which is stated as a
+limitation of the design in Section~\ref{subsec:limit}, but would not otherwise compromise the
+confidentiality of the meeting.
 
-We aim to minimize the damage that an active Insider can perform. An Insider compromising the Identity Management System may impersonate a user and potentially join a meeting on their behalf. We rely on the meeting leader to use the typical audiovisual cues and existing meeting moderation tools (e.g. the waiting room, and participant removal) to authorize and manage the meeting participants. In Phase III, we will force a malicious Identity Management System to commit to any misbehavior so that it can later be audited/exposed.
+We prevent Outsiders from joining meetings through passwords, waiting rooms and the other
+non-cryptographic server-enforced access control features described in
+Section~\ref{subsec:currdesign}. TLS and encryption of the meeting streams protect the
+confidentiality and integrity of the meeting against Outsiders who might control the participants'
+network.
 
-Active attacks of the bulletin board can at best deny service. Consider if Alice, Bob, and Charlie meet at meeting two days in a row, and a malicious Zoom server mixes bulletin board messages from the two meetings. In particular, what if Alice is the leader and the server replays Bob's previous ephemeral key? Alice doesn't realize it's Bob's previous key, so she'll obediently encrypt for it in step 4 of ``Participant Join (Leader)'' using her new ephemeral key. This will result in a message that Bob can't decrypt, since he'll be using his new ephemeral private key, having thrown his old ephemeral private key away at the end of the last meeting. The malicious server can't roll back the whole conversation, since Alice, Bob, and Charlie know to use their new ephemeral keys; they couldn't even use their old ones if they tried.
+Within the same meeting, the encrypted streams sent by each participants are protected against
+replay attacks by using encryption nonces as counters. Even across different meetings, the streams
+cannot be replayed thanks to the fact that participants delete all the ephemeral keys once a meeting
+is over (which also guarantees forward secrecy). 
 
-The meeting leader is responsible for authorizing participants, and should not perform key exchange with any unexpected user. Barring a malicious meeting leader colluding with Zoom servers, the confidentiality and integrity of one meeting can't be compromised by another meeting's join protocol.  Additionally, though clients rely on the meeting leader for the meeting key, the protocol offers the meeting leader security code to detect leader impersonation, and includes heartbeat messages to detect if the meeting key is not rotated as expected for forward secrecy.
+We aim to minimize the damage that an active Insider can perform without being detected. First, an
+Insider can force participants to drop out of a meeting, as well as partition them into separate
+meetings, each with its own leader, and add extra participants circumventing all the above
+server-enforced features. Our protocol ensures that the meeting leader will be able to detect any
+participant obtaining access to meeting encryption keys by monitoring the participant list for
+unexpected entries (for example, by recognizing the participants' faces in their video streams).
+Detecting unauthorized participants can be challenging in large meetings or in certain views, such
+as when the leader is sharing their screen. In the following phases, a stronger notion of identity
+will be leveraged to highlight potential eavesdroppers in the UI, such as those outside of the
+host's organization or guest users.
+
+A leader's view of the ``active'' participants list shows everyone who is in the meeting
+(i.e., everyone who has been given current meeting key, or the next one if a key rotation is in
+progress). If the host observes the same user leaving the meeting four or more times, the participant
+list will reflect the number of observed leaves. This alert helps participants notice when an attacker repeatedly joins and leaves a meeting rapidly, which would allow the attacker to learn most of the meeting keys but remain in the ``left'' column for the majority of the meeting. Due to the distributed nature of the
+system, this view of the participant list can be slightly out of date, both for the leader and for
+the other participants, but will eventually converge if there is a long enough span without
+participant churn. Some race conditions, such as participants quickly joining and leaving a meeting
+while the meeting leader is changing, might also cause participants who left a meeting to not be
+reflected in the ``left'' section of the participant list. This is necessary to guarantee a smooth
+meeting experience under poor network conditions. Heartbeat messages ensure that a key is rotated in
+a timely manner after an unwelcome participant has been removed from the meeting.
+
+An active attacker can also try to perform a MitM attack against the meeting. This class of attacks
+is mitigated by the ``Meeting Leader Security Code'', which should be re-checked every time a
+participant joins (or re-joins) the meeting, or whenever the meeting leader security code changes as
+indicated by a UI notification. 
 
 \subsection{Local Key Security}
 \label{subsec:lks}
@@ -70,14 +126,14 @@ On provisioning, after generating $\isk_i$, the client:
 \begingroup
 \RaggedRight
 \begin{enumerate*}
-\item Generates a 32-byte random string $\mathsf{KWK}_{s}$ and requests the server to store it persistently associated with the user.
-\item Computes $\textsf{KWK} \leftarrow \HKDF(\textsf{KWK}_{\textsf{s}}, \texttt{"Zoom00LKS\textbackslash0"})$ using \textsf{SHA256}.
-\item Computes $C \leftarrow \textsf{CtE1-Enc}(\textsf{K}{=}\textsf{KWK}, \textsf{H}{=}\texttt{""}, \textsf{M}{=}\isk_i)$, where $\textsf{H}$ is authenticated data for the underlying AEAD, and stores it in the system keychain.
+\item Generates a 32-byte random string $\mathsf{KWK}$ and requests the server to store it persistently associated with the user.
+\item Defines $\context \leftarrow \texttt{"Zoombase-1-ClientOnly-KDF-SecretStore"}$.
+\item Computes $C \leftarrow \textsf{CtE1-Enc}(\textsf{K}{=}\textsf{KWK}, \textsf{H}{=}\context, \textsf{M}{=}\isk_i)$, where $\textsf{H}$ is the associated data parameter for the underlying AEAD, and stores it in the system keychain.
 \end{enumerate*}
 \endgroup
 
-For \textsf{CtE1}, we will use $\textsf{HMAC}_{\textsf{SHA256}}$ as the commitment function and
-\sodium{}~\cite{libsodium}'s \linebreak \texttt{crypto\_aead\_chacha20poly1305\_ietf} for AEAD.
+For \textsf{CtE1}, we will use $\textsf{HMAC}_{\textsf{SHA256}}$ as the
+commitment function and \sodium{}~\cite{libsodium}'s \linebreak \texttt{crypto\_aead\_chacha20poly1305\_ietf} for AEAD.
 
 \subsection{Abuse Management and Reporting}
 If a user experiences abusive behavior and wishes to report it to Zoom's Trust and Safety team, they simply upload the unencrypted data normally collected in an abuse report (e.g. a description of the abuse and some portion of the meeting content) to Zoom for review. This protocol is imperfect, since it potentially could allow a bad meeting participant to ``frame'' an honest meeting participant for abuse that didn't happen. For the same reason, it allows an actual abuser to disavow uploaded evidence of their abuse. We think for now, the framing behavior is rare and only possible with access to good ``deep fake'' technology.
@@ -89,7 +145,10 @@ Future refinements are possible. Participants could sign their outgoing video st
     \item {\bf Repudiation:} Honest participants might not want an indelible record that they said something. They might understandably want to treat meetings as ephemeral in accordance with their standard data retention practices.
 \end{description}
 
-Given the challenges in this space, we will revisit these decisions at a later date as we gain more operational experience with the current proposal.
+Given these challenges, we will revisit our decisions at a later date as we gain more operational experience with the current proposal.
+
+\subsection{Guest Users}
+Users can join video meetings in guest mode, in which they generate fresh long-term keys for every meeting. This prevents other participants from tracing them across meetings by noticing when a long-term key is reused. Guest users include users who are not logged in.
 
 \subsection{Areas to Improve in Phase I}
 Phase I is geared toward a quick deployment and providing building blocks for future development phases. As such, there are some potential attacks we do not fully cover here:
