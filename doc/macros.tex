@@ -78,25 +78,64 @@
 \newcommand{\sharedsecretfips}{SS_{\sf FIPS}}
 \newcommand{\sharedsecreted}{SS}
 \newcommand{\metadata}{{\sf Meta}}
+\newcommand{\context}{{\sf Context}}
 
 \newcommand{\HKDF}{{\sf HKDF}}
+\newcommand{\SHATWO}{{\sf SHA256}}
 \newcommand{\meetingID}{{\sf meetingID}}
 \newcommand{\meetingUUID}{{\sf meetingUUID}}
-\newcommand{\deviceid}{{\sf deviceID}}
+\newcommand{\deviceid}{\enm{{\sf deviceID}}}
 \newcommand{\randomNonce}{{\sf RandomNonce}}
 \newcommand{\LL}{\ell}
-\newcommand{\binding}{{\sf binding}}
+\newcommand{\binding}{{\sf Binding}}
 
 \newcommand{\ivk}{\mathit{IVK}}
 \newcommand{\isk}{\mathit{ISK}}
 
+\newcommand{\enm}[1]{\ensuremath{#1}\xspace}
+
 \newcommand{\participantList}{I}
-\newcommand{\mk}{\mathit{mk}}
+% Previously we distinguished between lowercase mk and uppercase MK.
+\newcommand{\mk}{{\sf MK}}
 \newcommand{\MK}{{\sf MK}}
 \newcommand{\LPL}{\mathit{LPL}}
 \newcommand{\mkSequenceNumber}{\mathsf{mkSeqNum}}
 \newcommand{\identitySigchainTail}{\mathsf{identitySigchainTail}}
 \newcommand{\meetingStatus}{\mathsf{meetingStatus}}
-\newcommand{\userID}{\mathsf{userID}}
-\newcommand{\idp}{\mathrm{IDP}}
+\newcommand{\userID}{\enm{\mathsf{userID}}}
+\newcommand{\idp}{\enm{\mathrm{IDP}}}
 \newcommand{\sodium}{\texttt{libsodium}}
+\newcommand{\accountID}{\enm{\mathsf{accountID}}}
+
+\newcommand{\anto}[1]{{\color{red}[Antonio: #1]}}
+\newcommand{\merry}[1]{{\color{red}[Merry: #1]}}
+\newcommand{\surya}[1]{{\color{red}[Surya: #1]}}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{corollary}{Corollary}[theorem]
+\newtheorem{lemma}[theorem]{Lemma}
+\newcommand{\zdevtime}{d}
+\newcommand{\zpuks}{p}
+\newcommand{\zverif}{v}
+\newcommand{\zeq}{\enm{e}}
+\newcommand{\zdev}[1]{\mathbf{#1}}
+\newcommand{\zset}[1]{\mathbbm{\uppercase{#1}}}
+\newcommand{\zkey}[1]{{#1}}
+\newcommand{\zfam}{\mathcal{F}}
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}[section]
+\newcommand{\integers}{\enm{\mathbb{N}}}
+\newcommand{\zif}{\mathsf{if}\;}
+\newcommand{\zthen}{\mathsf{then}\;}
+\newcommand{\setsub}{\backslash}
+\newcommand{\zactive}[1]{\zset{d}_{#1} \setsub \zset{r}_{#1}}
+\newcommand{\zequiv}[1]{\equiv_{#1}}
+\newcommand{\znequiv}[1]{\not\equiv_{#1}}
+\newcommand{\zverift}[2]{\zverif_{#1}(\zdev{#2})}
+\newcommand{\zdevtimet}[2]{\zdevtime_{#1}(\zdev{#2})}
+\newcommand{\zpukst}[2]{\zpuks_{#1}(\zdev{#2})}
+\newcommand{\batchapprove}{\mathsf{BatchApprove}}
+\newcommand{\deviceadd}{\mathsf{DeviceAdd}}
+\newcommand{\devicerevoke}{\mathsf{DeviceRevoke}}
+\newcommand{\devicekeyrotate}{\mathsf{DeviceKeyRotate}}
+\newcommand{\peruserkeyrotate}{\mathsf{PerUserKeyRotate}}
