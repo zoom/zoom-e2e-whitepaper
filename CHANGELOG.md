@@ -1,6 +1,11 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [v2.3.1] - 2020-11-03
+### Changed
+- Corrected release versions in Appendix A to indicate Server Key Certificate Chains is not released
+  as of client version 5.4.0
+
 ## [v2.3] - 2020-10-14
 ### Added
 - Indicate what the LPL keeps track of, per user
