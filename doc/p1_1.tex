@@ -86,8 +86,11 @@ For signing, we use \sodium 's EdDSA implementation directly:
 
 \subsubsection{Authenticated Public-Key Encryption}
 
-Authenticated public-key encryption uses \sodium 's \texttt{crypto\_box}
-interface:
+Authenticated public-key encryption also uses \sodium. Note that in encryption
+and decryption, we derive shared keys and use them to encrypt/decrypt the
+message as separate steps, firstly so we can cache the derived keys, and
+secondly because \sodium{} does not expose a function that directly supports
+using associated data in public-key encryption, only in symmetric encryption.
 
 %%%%%%%%%%%%%%%%%%%%%
 % CRYPTO_BOX KEYGEN
@@ -125,7 +128,7 @@ To encrypt:
 \begin{enumerate*}
 \item Generate a 192-bit random string $\randomNonce$.
 \item Compute $K' \leftarrow \texttt{crypto\_box\_beforenm}(\pkboxR, \skboxS)$, which is the DH key-exchange of the public key $\pkboxR$ and the private key $\skboxS$.
-\item Compute $K \leftarrow \HKDF(K', \context_\textsf{KDF})$, using an empty HKDF salt parameter.
+\item Compute $K \leftarrow \HKDF(K', \context_\textsf{KDF})$, using an empty HKDF salt parameter. ($K$ may be cached for this keypair and context.)
 \item Compute $D \leftarrow \SHATWO(\context_\textsf{cipher}) || \SHATWO(\metadata)$.
 \item Compute $C' \leftarrow \texttt{crypto\_aead\_xchacha20poly1305\_ietf\_encrypt}(M, D, \randomNonce, K)$, which computes XChaCha20/Poly-1305 over the plaintext $M$ with the symmetric key $K$, the associated data $D$, and the nonce $\randomNonce$.
 \item Output $C \leftarrow (C', \randomNonce)$.
@@ -148,13 +151,14 @@ To decrypt:
 \begin{enumerate*}
 \item Parse $\ciphertext$ as $(C', \randomNonce)$.
 \item Compute $K' \leftarrow \texttt{crypto\_box\_beforenm}(\pkboxR, \skboxS)$.
-\item Compute $K \leftarrow \HKDF(K', \context_\textsf{KDF})$, using an empty HKDF salt parameter.
+\item Compute $K \leftarrow \HKDF(K', \context_\textsf{KDF})$, using an empty HKDF salt parameter. ($K$ may be cached for this keypair and context.)
 \item Compute $D \leftarrow \SHATWO(\context_\textsf{cipher}) || \SHATWO(\metadata)$.
 \item Compute $M \leftarrow \texttt{crypto\_aead\_xchacha20poly1305\_ietf\_decrypt}(C', D, \randomNonce, K)$. If decryption fails, output $\errorSym$. Otherwise output $M$.
 \end{enumerate*}
 \endgroup
 
 \subsection{Long-term Key Management}
+\label{sec:keymanage}
 
 When user $i$ signs up, or upgrades their Zoom application to the first version that supports E2E as described in this proposal, their client generates a long-term signing keypair:
 
@@ -180,7 +184,7 @@ Figure~\ref{fig:ladder} describes the basic flow of a leader admitting a partici
 % Agents
 \def\Bob{Bob}
 \def\MMR{Zoom MMR}
-\def\Keyserver{Zoom Key Server}
+\def\Keyserver{Zoom Keyserver}
 \def\Alice{Alice}
 
 % Diagram
@@ -220,8 +224,8 @@ Figure~\ref{fig:ladder} describes the basic flow of a leader admitting a partici
 
 \draw [dotted] (\Bob 2.south) -- (\Alice 2.south);
 
-\draw (\Bob 3) node[draw,align=center,fill=white] {$(\pk_B, \sk_B) = \cboxkeygen()$ \\ $bundle_B \leftarrow (\sig^B_{\mathsf{Server}}, \sig_B)$};
-\draw (\Alice 3) node[draw,align=center,fill=white] {$(\pk_A, \sk_A) = \cboxkeygen()$ \\ $bundle_A \leftarrow (\sig^A_{\mathsf{Server}}, \sig_A)$};
+\draw (\Bob 3) node[draw,align=center,fill=white] {$(\pk_B, \sk_B) = \cboxkeygen()$ \\ $bundle_B \leftarrow (\sig^B_{\mathsf{Server}}, \sig_B, pk_B)$};
+\draw (\Alice 3) node[draw,align=center,fill=white] {$(\pk_A, \sk_A) = \cboxkeygen()$ \\ $bundle_A \leftarrow (\sig^A_{\mathsf{Server}}, \sig_A, pk_A)$};
 
 \draw [-latex] (\Alice 4) -- node[fill=white] {$bundle_A$} (\Keyserver 4.east) arc(0:180:0.25cm) -- (\MMR 4);
 \draw [-latex] (\MMR 4) -- node[fill=white] {$bundle_A$} (\Bob 4);
@@ -250,8 +254,9 @@ Figure~\ref{fig:ladder} describes the basic flow of a leader admitting a partici
 \subsubsection{Server Key Certificate Chains}
 \label{subsubsec:servercert}
 
-When a client joins a meeting, the Zoom server signs a statement indicating that the client's
-$\userID$, $\deviceid$, and $\ivk$ is authorized.
+When a client $i$ joins a meeting, the Zoom server signs a statement
+$\sig^i_{\mathsf{Server}}$ indicating that the client's $\userID$, $\deviceid$,
+and $\ivk$ are authorized.
 
 We'll use certificate pinning to strengthen the security of the server signature. Zoom clients will ship with a DigiCert root certificate and they will only trust certificates authorized for a specific Zoom domain via a certificate chain originating from the DigiCert root. Hardware Security Modules (HSMs) are used to manage keys for an internal intermediate CA, which will in turn attest to the servers' signing keys. Server keys are valid for a week and are rotated daily. In order to detect certificate revocation in the event of CA or server compromise, clients require stapled OCSP responses on the intermediate certificates they receive.
 
@@ -270,13 +275,13 @@ When any participant $i$ joins the meeting, whether before or after it starts, a
 \item Defines $\context \leftarrow \texttt{"Zoombase-1-ClientOnly-Sig-EncryptionKeyAnnouncement"}$.
 \item Computes $\sig_i \leftarrow \zoomsignsign(\isk_i, \context, \binding_i)$.
 \item Stores $\sk_i$ for the duration of the meeting.
-\item Posts $\sig_i$ to the bulletin board, so that all participants can see it.
+\item Posts $\sig_i$ and $\pk_i$ to the bulletin board, so that all participants can see it.
 \end{enumerate*}
 \endgroup
 
 \subsubsection{Leader Join}
 
-When the leader joins the meeting $\meetingID$, it:
+When the leader joins the meeting $\meetingID$, they:
 
 \begingroup
 \RaggedRight
@@ -288,6 +293,9 @@ When the leader joins the meeting $\meetingID$, it:
 \end{enumerate*}
 \endgroup
 
+Each $\mk$ has an associated sequence number $\mkSequenceNumber$, starting at 1 and incrementing
+whenever the key changes as described in Section~\ref{subsubsec:keyrotation}.
+
 \subsubsection{Participant Join (Leader)}
 \label{subsubsec:participantjoinleader}
 
@@ -297,7 +305,7 @@ Given a leader $\LL$ and a participant $i$ joining meeting $\meetingID$ on $\dev
 \RaggedRight
 \begin{enumerate*}
 \item Fetches $\ivk_i$ from the key server.
-\item Fetches $\sig_i$ from the meeting's ``bulletin board''.
+\item Fetches $\sig_i$ and $\pk_i$ from the meeting's ``bulletin board''.
 \item Computes $\binding_i \leftarrow \left( \meetingID \| \allowbreak \meetingUUID \| i \allowbreak \| \deviceid \| \ivk_i \| \allowbreak \pk_i \right)$.
 \item Defines $\textsf{Context}_\textsf{sign} \leftarrow \texttt{"Zoombase-1-ClientOnly-Sig-EncryptionKeyAnnouncement"}$.
 \item Verifies the signature: $\zoomsignverify(\ivk_i, \sig_i, \textsf{Context}_\textsf{sign}, \binding_i)$.
@@ -305,7 +313,8 @@ Given a leader $\LL$ and a participant $i$ joining meeting $\meetingID$ on $\dev
 \item Computes $\metadata \leftarrow \left( \meetingID \| \allowbreak \meetingUUID \| \allowbreak \LL \| i \right)$.
 \item Defines $\textsf{Context}_\textsf{KDF} \leftarrow \texttt{"Zoombase-1-ClientOnly-KDF-KeyMeetingSeed"}$.
 \item Defines $\textsf{Context}_\textsf{cipher} \leftarrow \texttt{"Zoombase-1-ClientOnly-Sig-EncryptionKeyMeetingSeed"}$.
-\item Computes $\ciphertext \leftarrow \cboxencrypt(\sk_\LL, \pk_i, \textsf{Context}_\textsf{KDF}, \textsf{Context}_\textsf{cipher}, \metadata, \mk)$.
+\item Computes $\ciphertext \leftarrow \cboxencrypt(\sk_\LL, \pk_i, \textsf{Context}_\textsf{KDF},
+    \textsf{Context}_\textsf{cipher}, \metadata, (\mk, \mkSequenceNumber))$.
    \label{participantJoinRekeyStart}
 \item Posts $(i, \ciphertext)$ to the ``bulletin board''.
    \label{participantJoinRekeyEnd}
@@ -330,7 +339,7 @@ When participant $i$ joins meeting $\meetingID$, it performs the reverse of the 
 \item Computes $\metadata \leftarrow \left(\meetingID \| \allowbreak \meetingUUID \| \allowbreak \LL \| i \right)$.
 \item Defines $\textsf{Context}_\textsf{KDF} \leftarrow \texttt{"Zoombase-1-ClientOnly-KDF-KeyMeetingSeed"}$.
 \item Defines $\textsf{Context}_\textsf{cipher} \leftarrow \texttt{"Zoombase-1-ClientOnly-Sig-EncryptionKeyMeetingSeed"}$.
-\item Decrypts $\mk \leftarrow \cboxdecrypt(\sk_{i}, \pk_{\LL}, \textsf{Context}_\textsf{KDF}, \textsf{Context}_\textsf{cipher}, \metadata, \ciphertext)$.
+\item Decrypts $(\mk, \mkSequenceNumber) \leftarrow \cboxdecrypt(\sk_{i}, \pk_{\LL}, \textsf{Context}_\textsf{KDF}, \textsf{Context}_\textsf{cipher}, \metadata, \ciphertext)$.
    \label{participantJoinRekeyNonLeader}
 \end{enumerate*}
 \endgroup
