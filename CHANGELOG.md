@@ -1,6 +1,21 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [v3] - 2020-12-15
+### Added
+- Major additions to the Phase II section
+- Table of Contents
+- An additional author: Surya Rien
+- An acknowledgements section
+### Changed
+- Clarify that meeting key seed boxes include mkSeqNum in addition to the key seed
+- Provide more context for the choice of our authenticated encryption algorithms
+- Clarify that we are considering to reintroduce a secure version of the Cloud Recording feature
+- Clarify that in Phase 1 display names should not be relied upon to establish a meeting participant's identity
+- Clarify the security guarantees of the feature described in the Local Key Security section 
+### Removed
+- Multiple ZTTs in Phase III. We will use a single one (per cloud infrastructure) instead.
+
 ## [v2.3.1] - 2020-11-03
 ### Changed
 - Corrected release versions in Appendix A to indicate Server Key Certificate Chains is not released

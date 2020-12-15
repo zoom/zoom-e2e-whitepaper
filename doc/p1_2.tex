@@ -1,23 +1,39 @@
 \subsubsection{Key Rotation}
+\label{subsubsec:keyrotation}
+At any point later in the meeting, the leader can generate a new 32-byte value $\mk'$. The leader
+performs steps \ref{participantJoinRekeyStart}-\ref{participantJoinRekeyEnd} of ``Participant Join
+(Leader)'' for all participants, with the updated $\mk'$ value. All participants see the rekey
+signal on their signaling channel, and perform step \ref{participantJoinRekeyNonLeader} of
+``Participant Join (Non-Leader)''. Participants should not immediately encrypt using the new meeting
+key; they should wait about 2 seconds, to ensure all participants smoothly transition over. Each
+participant ensures $\mkSequenceNumber$ in the ciphertext sent by the leader is greater than the
+previously known $\mkSequenceNumber$; otherwise the key rotation is ignored.
 
-At any point later in the meeting, the leader can generate a new 32-byte value $\mk'$. The leader performs steps \ref{participantJoinRekeyStart}-\ref{participantJoinRekeyEnd} of ``Participant Join (Leader)'' for all participants, with the updated $\mk'$ value. All participants see the rekey signal on their signaling channel, and perform step \ref{participantJoinRekeyNonLeader} of ``Participant Join (Non-Leader)''.  Participants should not immediately encrypt using the new meeting key; they should wait about 2 seconds, to ensure all participants smoothly transition over.
-
-The leader should trigger a rekey whenever a participant enters or leaves the meeting, but not more than every 15 seconds (to prevent thrashing). As an important security measure, users joining the meeting never get to see keys that are more than 15 seconds old, since otherwise they could view encrypted in-meeting chats deep into the meeting's past. But likewise this rekeying strategy shouldn't delay a user from joining a meeting.
+The leader should trigger a rekey whenever a participant enters or leaves the meeting, but not more
+than every 15 seconds (to prevent thrashing). As an important security measure, users joining the
+meeting never get to see keys that are more than 15 seconds old, since otherwise they could view
+encrypted in-meeting chats deep into the meeting's past. Similarly, users who leave a meeting might
+be able to decrypt meeting content sent in the next 15 seconds (or up to a couple of minutes if the
+server is suppressing messages to prevent the leader from rotating the key). But likewise this
+rekeying strategy shouldn't delay a user from joining a meeting.
 
 It's important to note each $\mk$ is independently generated, so knowing the previous $\mk$ provides no information about the subsequent $\mk'$.
 
-Each $\mk$ has an associated sequence number $\mkSequenceNumber$, starting at 1 and incrementing whenever it rolls over. The leader sends this sequence number along with the participant list heartbeat below.
-
 \subsubsection{Leader Participant List}
 
-A meeting leader maintains a ``leader participant list'' ($\LPL$) tabulating all the users in the meeting. For each user currently in the meeting, the $\LPL$ keeps track of a hash over their $\binding_i$, which includes their $\ivk_i$, $pk_i$, $\userID$, and $\deviceid$, as well as their display name. For users who have left the meeting, the $\LPL$ tracks only their $\ivk_i$, $\userID$, $\deviceid$, and display name.
+A meeting leader maintains a ``leader participant list'' ($\LPL$) tabulating all the users in the meeting. For each user currently in the meeting, the $\LPL$ keeps track of a hash over their $\binding_i$, which includes their $IVK_i$, $pk_i$, $\userID$, and $\deviceid$, as well as their display name. For users who have left the meeting, the $\LPL$ tracks only their $\userID$, $\deviceid$, $\ivk_i$, and display name.
 
 The $\LPL$ is used to drive the participant list in the user interface, which records both users
-currently in the meeting and those who have left. For implementation reasons, we rely on the MMRs to
-provide the display names for people who are currently participating in the meeting, and on the
-$\LPL$ for people who have left the meeting. It is possible that race conditions during leader
+currently in the meeting and those who have left. It is possible that race conditions during leader
 changes (caused by a bad network or a malicious server) could prevent some meeting participants from
-being reflected reflected in the ``left'' section of the participant list.
+being reflected in the ``left'' section of the participant list.
+
+In Phase 1, the participant list only identifies users through their self-selected display name and
+profile picture. Changes to participant's display names are relayed by the server to the leader, who
+includes them in the $\LPL$, so a compromised server can change the display names of any meeting
+participant. As such, display names should not be relied on to establish the participants'
+identities. In the following phases, we will introduce a strong notion of identities to address
+these limitations.
 
 The $\LPL$ is represented as a sequence of operations such as adding a user to the meeting, or noting when a user has left. Every time there is such an operation, the leader increments a counter $v$ representing the total number of operations and signs over a data structure (called a \textit{link}) containing the counter, the hash of the previous link, and the current operation. If there are more than 20 links in the chain, the leader can coalesce all of the previous links into a smaller number of links. The old links are then deleted in order to save space.
 
@@ -33,7 +49,7 @@ By replaying the sequence of operations in the bulletin board, the other partici
 
 When a leader does drop out of a meeting, the Zoom server picks a new leader arbitrarily and sends a signal to participants indicating that the leader has changed. The new leader then coalesces the chain as described above, and other participants verify that the new leader is present in the new $\LPL$.
 
-For users in the meeting, clients remember the mapping between $(\userID, \deviceid)$ and the hash over the corresponding $\binding_i$, and ensure that the hash remains stable across new links and leader changes. If a user leaves the meeting, it is enforced that any user who rejoins with the same $\userID$ and $\deviceid$ must have the same $\ivk_i$, but not necessarily the same $\pk_i$. These guarantees persist only over the course of a single meeting.
+For users in the meeting, clients remember the mapping between $(\userID, \deviceid)$ and hash over the corresponding $\binding_i$, and ensure that the hash remains stable across new links and leader changes. If a user leaves the meeting, it is enforced that any user who rejoins with the same $\userID$ and $\deviceid$ must have the same $\ivk_i$, but not necessarily the same $\pk_i$. These guarantees persist only over the course of a single meeting.
 
 \subsubsection{Meeting Teardown}
 At the end of the meeting, or when leaving a meeting early, all participants should discard all meeting keys, all keys derived from those meeting keys, and the ephemeral DH private keys $\sk_i$ they generated when they joined.
@@ -116,7 +132,9 @@ for two Zoom users using the same OS account.
 %
 Before storing keys in the local OS-provided keychain, we will encrypt them using a server-synchronized key-wrapping key.
 %
-When a user deprovisions their device, they will delete the keychain entry and the server will delete its key.
+When a user deprovisions their device, they will delete the keychain entry and the server will
+delete its key. This also guarantees that keys cannot be recovered from a backup of a device that
+has since been revoked.
 %
 If two users are using the same computer, the key-wrapping key prevents one user from being able to access the other's keys.
 
@@ -135,6 +153,10 @@ On provisioning, after generating $\isk_i$, the client:
 For \textsf{CtE1}, we will use $\textsf{HMAC}_{\textsf{SHA256}}$ as the
 commitment function and \sodium{}~\cite{libsodium}'s \linebreak \texttt{crypto\_aead\_chacha20poly1305\_ietf} for AEAD.
 
+We want to emphasize that this feature will not protect against an insider who also has access to a
+user's device (in particular, by colluding with another user using the same device). It will also not
+prevent different users of the same device from installing malware to steal the other user's keys.
+
 \subsection{Abuse Management and Reporting}
 If a user experiences abusive behavior and wishes to report it to Zoom's Trust and Safety team, they simply upload the unencrypted data normally collected in an abuse report (e.g. a description of the abuse and some portion of the meeting content) to Zoom for review. This protocol is imperfect, since it potentially could allow a bad meeting participant to ``frame'' an honest meeting participant for abuse that didn't happen. For the same reason, it allows an actual abuser to disavow uploaded evidence of their abuse. We think for now, the framing behavior is rare and only possible with access to good ``deep fake'' technology.
 
@@ -148,7 +170,7 @@ Future refinements are possible. Participants could sign their outgoing video st
 Given these challenges, we will revisit our decisions at a later date as we gain more operational experience with the current proposal.
 
 \subsection{Guest Users}
-Users can join video meetings in guest mode, in which they generate fresh long-term keys for every meeting. This prevents other participants from tracing them across meetings by noticing when a long-term key is reused. Guest users include users who are not logged in.
+Users can join video meetings in guest mode, in which they will generate fresh long-term keys for every meeting. This prevents other participants from tracing them across meetings by noticing when a long-term key is reused. Guest users include users who are not logged in.
 
 \subsection{Areas to Improve in Phase I}
 Phase I is geared toward a quick deployment and providing building blocks for future development phases. As such, there are some potential attacks we do not fully cover here:

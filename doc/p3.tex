@@ -44,14 +44,6 @@ Because we only trust keys stored within the ZTT, users in a meeting will verify
 
 The contact lists that users accumulate in Phase II are now also stored in the ZTT. The immutability guarantees that the ZTT provides means that Alice can note an update to Bob's identity in the client installed on her phone, and Zoom is obliged to relay that update to her desktop client.
 
-\subsubsection{Multiple Trees}
-
-In this setting, we anticipate the need for multiple ZTTs, one for each organization, and a global tree computed over all the organization-specific trees. This tiered architecture has several advantages: it allows organizations who want independence from each other to keep their data disentangled; it enables sensitivity to local data protection laws, as different trees can have different parameters; it improves scalability; it better mirrors Zoom's current server-side infrastructure; it anticipates a future federated architecture; and it simplifies audits, since auditors can focus on the global tree and their organization's tree.
-
-We anticipate a downside from this approach from our experience at Keybase: sometimes it is necessary to coordinate updates to different parts of the tree to ensure strict ``happens before'' relationships across leaves. For instance, Keybase guarantees that if a user signs on behalf of a team, and then revokes that key, the signature happens provably before the revocation.
-
-The multiple tree architecture might make such constraints impossible if across different independent trees, but we anticipate that slight relaxations of certain security requirements will smooth the way.
-
 \subsection{Areas to Improve in Phase III}
 
 Though an equivocating server will be detected, we rely on the user to validate device additions. Users might be offline or might be ignoring notifications and therefore compromises might not be detected, or only detected after an attack.
