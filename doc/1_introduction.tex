@@ -20,7 +20,7 @@ Videoconferencing systems in which the server relies on plaintext access to the 
 If a PSTN or SIP client is authorized to join, the MMR provides the per-meeting encryption key to specialized connector servers in Zoom's infrastructure. These servers act as a proxy: they decrypt and composite the meeting content streams in the same manner as a Zoom client and then re-encode the content in a manner appropriate for the connecting client. Zoom's optional Cloud Recording feature works similarly, recording the decrypted streams and hosting the resulting file in Zoom's cloud for the user to access. In the current design, Zoom's infrastructure brokers access to the meeting key.
 
 This current design provides confidentiality and authenticity for all Zoom data streams by providing
-encryption between Zoom client endpoints. However, it does not provide provide end-to-end key
+encryption between Zoom client endpoints. However, it does not provide end-to-end key
 management. In the current implementation, a passive adversary who can monitor Zoom's server
 infrastructure and who has access to the memory of the relevant Zoom servers may be able to defeat
 encryption. The adversary can observe the shared meeting key (MK), derive session keys, and decrypt
