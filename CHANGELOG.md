@@ -1,6 +1,13 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [v3.1] - 2021-10-05
+### Added
+- New section on Zoom Phone in Phase I
+- Describe the Lock The Meeting feature, available since 5.6.
+- Clarify that participants need to agree on who the leader is when checking the meeting leader security code.
+- An additional author: Brian Chen
+
 ## [v3] - 2020-12-15
 ### Added
 - Major additions to the Phase II section
