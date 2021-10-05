@@ -19,7 +19,7 @@ rekeying strategy shouldn't delay a user from joining a meeting.
 
 It's important to note each $\mk$ is independently generated, so knowing the previous $\mk$ provides no information about the subsequent $\mk'$.
 
-\subsubsection{Leader Participant List}
+\subsubsection{Leader Participant List}\label{subsubsec:lpl}
 
 A meeting leader maintains a ``leader participant list'' ($\LPL$) tabulating all the users in the meeting. For each user currently in the meeting, the $\LPL$ keeps track of a hash over their $\binding_i$, which includes their $IVK_i$, $pk_i$, $\userID$, and $\deviceid$, as well as their display name. For users who have left the meeting, the $\LPL$ tracks only their $\userID$, $\deviceid$, $\ivk_i$, and display name.
 
@@ -51,17 +51,35 @@ When a leader does drop out of a meeting, the Zoom server picks a new leader arb
 
 For users in the meeting, clients remember the mapping between $(\userID, \deviceid)$ and hash over the corresponding $\binding_i$, and ensure that the hash remains stable across new links and leader changes. If a user leaves the meeting, it is enforced that any user who rejoins with the same $\userID$ and $\deviceid$ must have the same $\ivk_i$, but not necessarily the same $\pk_i$. These guarantees persist only over the course of a single meeting.
 
+\subsubsection{Locked Meetings}
+\label{subsubsec:lockedmeetings}
+Hosts and co-hosts have the ability to lock and unlock the meeting. While a meeting is locked, no new users will be admitted into the meeting. In non-E2EE meetings, the server performs all access control, but locked E2EE meetings will offer stronger guarantees.
+
+When the leader presses the ``Lock Meeting" or ``Unlock Meeting" buttons in the user interface, their client adds a corresponding link to the $\LPL$. Other participants' clients show that the meeting is locked only when it is set in $\LPL$; the server does not have the ability to influence this part of the user interface. When a locked meeting becomes unlocked (as indicated by the $\LPL$), all participants' user interfaces display a prominent warning indicating the change. 
+
+Note that due to the tolerances in propagating the $\LPL$, the server might prevent a participant from learning that the host has locked a meeting by withholding the relevant link and selecting a new host within 100 seconds. This would result in either a meeting partition or warnings about the unlocking for any participant who had received a link that locked the meeting.
+
+While the meeting is locked, the leader's client will refuse to send the meeting key to any new participants who request to join. However, if a user leaves and then rejoins with the same $\ivk$ (as is recorded in the $\LPL$), the leader allows them to rejoin. This lets participants who drop out due to network issues automatically reconnect even while the meeting is locked. 
+
+If the leader changes while the $\LPL$ indicates that the meeting is locked, participants ensure that the new leader was in the previous $\LPL$. If not, they drop out of the meeting. The new leader can then copy over the locked bit and the list of participants from the old $\LPL$ into the new link.
+
+Co-hosts are also able to lock and unlock the meeting. They do this by sending a signed message to the leader via the bulletin board. The leader ensures that the co-host is really a member of the current $\LPL$ before processing the change, and trusts the server to identify whether each participant is actually a co-host. Since the server also has the ability to select a new meeting host among existing participants of a locked meeting, this change does not significantly degrade the security of the meeting. In order to prevent replays, co-hosts sign over the latest $\LPL$ link hash, and leaders ensure that this matches their view of the $\LPL$ before accepting. If the $\LPL$ changes before the co-host's message was received and processed, the co-host tries again.
+
+From a security perspective, once a participant learns that the meeting is locked and checks that all current participants are trustworthy (e.g., via a meeting leader security code check), they can be sure that no unintended parties have or will have access to the meeting until an ``unlocked meeting" warning is displayed. 
+
+These additional guarantees for locked E2EE meetings were added in Zoom client version 5.6.0 (see Appendix~\ref{appendix:releases}).
+
 \subsubsection{Meeting Teardown}
 At the end of the meeting, or when leaving a meeting early, all participants should discard all meeting keys, all keys derived from those meeting keys, and the ephemeral DH private keys $\sk_i$ they generated when they joined.
 
 The intent here is to provide forward secrecy. That is, if an adversary can record all encrypted messages relayed between Zoom clients during the meeting, and can later recover all keys stored on a user's device after the meeting ends, they still cannot recover the meeting data.
 
-\subsection{Meeting Leader Security Code}
+\subsection{Meeting Leader Security Code}\label{subsec:securitycode}
 If all participants can verify the authenticity of the leader's public key ($\ivk_{\LL}$), they are safe from ``meddler-in-the-middle attacks'' (MitM)\footnote{``Meddler-in-the-middle attack'' is also known as ``man-in-the-middle attack''.}. The Zoom client exposes the following ``meeting leader security code'' in the security tab:
 
 $$\mathsf{Digits}(\SHATWO(\SHATWO(\texttt{"Zoombase-1-ClientOnly-MAC-SecurityCode"}) || \SHATWO(\ivk_{\LL})))$$
 
-$\mathsf{Digits}$ extracts a string of 39 decimal digits from a SHA-256 hash, representing just over 129 bits of information. This representation is more human-readable and more internationalizable than the full hexadecimal hash. Crucially, every Zoom client in the meeting independently computes these codes from the $\ivk_{\LL}$ used in the handshake protocol. The length of the code is long enough to protect against second pre-image attacks. The leader reads out the meeting leader security code, and everyone in the meeting in turn does the same thing. If the code does not match, the participant should speak up in the meeting, and the leader should rotate the meeting key by kicking them out; they may be allowed to rejoin and try again.
+$\mathsf{Digits}$ extracts a string of 39 decimal digits from a SHA-256 hash, representing just over 129 bits of information. This representation is more human-readable and more internationalizable than the full hexadecimal hash. Crucially, every Zoom client in the meeting independently computes these codes from the $\ivk_{\LL}$ used in the handshake protocol. The length of the code is long enough to protect against second pre-image attacks. The leader reads out the meeting leader security code, after which everyone in the meeting in turn does the same thing. If the code does not match, the participant should speak up in the meeting, and the leader should rotate the meeting key by kicking them out; they may be allowed to rejoin and try again. By having the leader go first, participants verify that they all agree both on which of them is the leader, and on their $\ivk_{\LL}$. Both properties are necessary to detect MitM attacks.
 
 If deep fake technology\footnote{We use ``deep fakes'' to refer to manipulated and/or fabricated audio/video data that uses synthetic media techniques to replace the likeness of one person with another. Using a ``deep fake'' (especially in real-time) of a meeting participant could potentially deceive others about the identity of that participant.} is a concern, or the participants do not know each other in advance, this verification can also happen over a different out-of-band secure channel.
 
@@ -120,7 +138,7 @@ meeting experience under poor network conditions. Heartbeat messages ensure that
 a timely manner after an unwelcome participant has been removed from the meeting.
 
 An active attacker can also try to perform a MitM attack against the meeting. This class of attacks
-is mitigated by the ``Meeting Leader Security Code'', which should be re-checked every time a
+is mitigated by the meeting leader security code, which should be re-checked every time a
 participant joins (or re-joins) the meeting, or whenever the meeting leader security code changes as
 indicated by a UI notification. 
 
@@ -172,10 +190,35 @@ Given these challenges, we will revisit our decisions at a later date as we gain
 \subsection{Guest Users}
 Users can join video meetings in guest mode, in which they will generate fresh long-term keys for every meeting. This prevents other participants from tracing them across meetings by noticing when a long-term key is reused. Guest users include users who are not logged in.
 
+\subsection{E2E Encryption for Zoom Phone}\label{subsec:phone}
+
+Zoom Phone is a cloud phone system, in which Zoom Phone users are assigned phone numbers and can call other Zoom Phone users, as well as other telephone landline and mobile numbers. As with Zoom Meetings, the current Zoom Phone design encrypts data streams in transit between client endpoints and the server, but not in an end-to-end manner: a passive adversary with Zoom server access may be able to decrypt the data streams. To increase the guarantees for Zoom Phone users and reduce reliance on the server, we will also deploy end-to-end encryption for Zoom Phone.
+
+In designing E2EE for Zoom Phone, we have very similar goals, threat models, and limitations as in Zoom Meetings. We wish to prevent even insiders with access to Zoom servers from compromising the confidentiality and integrity of E2E-encrypted Zoom Phone calls. Like Zoom Meetings, Zoom Phone has many features that are not compatible with strong cryptographic guarantees, such as dialing in from PSTN phones. Such features will be disabled when E2E is enabled.
+
+Initially, we will only support E2EE for calls between two Zoom Phone clients in the same account, which greatly simplifies the protocol.
+
+\subsubsection{Join/Leave Protocol}
+
+We use the same \sodium{} cryptographic primitives and key management system as Zoom Meetings (described in Sections~\ref{subsec:cryptoalgs} and \ref{sec:keymanage}).
+Zoom Phone calls are identified with {\sf CallSessionID} instead of $\meetingID$ and $\meetingUUID$.
+
+To join an E2E call, participants ask for signed statements from the Zoom server over their ID and long-term key, just as in Zoom meetings (described in Section~\ref{subsubsec:servercert}). They also generate per-call ephemeral DH keys $(\pk_i, \sk_i)$, sign them with their device keys (similar to Section~\ref{subsubsec:partikeygen}), and send the key and signature to the other participant.
+
+The call is encrypted with a shared meeting key obtained from the DH key exchange of the clients' ephemeral keys (using the participants' UIDs and the {\sf CallSessionID} as context). Since the set of participants is fixed, the key does not rotate and does not have a sequence number, and there is also no Leader Participant List, heartbeats, or any analogue of the ``locked meeting'' feature.
+Participants still fetch each other's long-term public keys from the key server. Instead of the bulletin board, the server simply offers an interface for the two callers to message each other.
+When upgrading to E2EE, each client first sends its own signed ephemeral key, and when it receives the other party's key material, it responds with an explicit acknowledgement message. Once it receives the other party's acknowledgement, the client can start encrypting its own call stream.
+
+\subsubsection{Phone Security Code}
+
+To defend against MitM attacks, Zoom Phone provides a ``phone security code'' that has a similar format to the meeting leader security code (Section~\ref{subsec:securitycode}), but that is derived from the ephemeral public keys of both parties. Since the set of participants is fixed, there is no concern about this code changing too frequently. The security code is computed as
+$$\mathsf{Digits}(\SHATWO(\context || \pk_{\sf Caller} || \pk_{\sf Callee} || {\sf CallSessionID}))$$
+where $\context$ is the string \texttt{"Zoombase-2-ClientOnly-KDF-PhoneSecurityCode"}. The user who initiated the call is designated the {\sf Caller}, and the other user is the {\sf Callee}.
+
 \subsection{Areas to Improve in Phase I}
 Phase I is geared toward a quick deployment and providing building blocks for future development phases. As such, there are some potential attacks we do not fully cover here:
 \begin{description}
-\item {\bf Meddler-in-the-Middle.} The ``meeting leader security code'' proposal above is a countermeasure for the classic ``meddler in the middle attack'', wherein Bob isn't actually connecting to Zoom, he's connecting to Eve who is proxying his communications. But our solution isn't perfect.  First off, it can be defeated by deep fake technology; second, it's clunky from a UX perspective; and third, the meeting leader may have to perform the ceremony multiple times with any users joining the meeting late. We could work toward addressing all of these concerns, but future phases of development provide better solutions by building strong notions of identity.
+\item {\bf Meddler-in-the-Middle.} The meeting leader security code and phone security code mechanisms above are countermeasures for the classic ``meddler in the middle attack'', wherein Bob isn't actually connecting to Zoom, he's connecting to Eve who is proxying his communications. But our solution isn't perfect.  First off, it can be defeated by deep fake technology; second, it's clunky from a UX perspective; and third, in meetings the leader may have to perform the ceremony multiple times with any users joining the meeting late. We could work toward addressing all of these concerns, but future phases of development provide better solutions by building strong notions of identity.
 \item {\bf Anonymous Eavesdropper.} An adversary, in conjunction with a malicious Zoom server, types in a name of their choosing, turns off video, mutes their microphone and just observes. We'll fix this problem with better identity guarantees in Phase II.
 \item {\bf Impersonation Attacks Within the Meeting.} Even if Alice and Bob are both authorized to be in the meeting, if Alice has the help of a malicious server, she can inject audio/video for Bob. Charlie would have no way of knowing that Bob's stream was being faked.
 \end{description}

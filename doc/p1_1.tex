@@ -61,7 +61,7 @@ The system assumes the following components:
 
 \end{description}
 
-\subsection{Cryptographic Algorithms}
+\subsection{Cryptographic Algorithms}\label{subsec:cryptoalgs}
 
 All meeting data sent over UDP gets encrypted with AES in GCM mode~\cite{sp80038d}.
 %
@@ -150,7 +150,7 @@ To decrypt:
 \RaggedRight
 \begin{enumerate*}
 \item Parse $\ciphertext$ as $(C', \randomNonce)$.
-\item Compute $K' \leftarrow \texttt{crypto\_box\_beforenm}(\pkboxR, \skboxS)$.
+\item Compute $K' \leftarrow \texttt{crypto\_box\_beforenm}(\pkboxS, \skboxR)$.
 \item Compute $K \leftarrow \HKDF(K', \context_\textsf{KDF})$, using an empty HKDF salt parameter. ($K$ may be cached for this keypair and context.)
 \item Compute $D \leftarrow \SHATWO(\context_\textsf{cipher}) || \SHATWO(\metadata)$.
 \item Compute $M \leftarrow \texttt{crypto\_aead\_xchacha20poly1305\_ietf\_decrypt}(C', D, \randomNonce, K)$. If decryption fails, output $\errorSym$. Otherwise output $M$.
@@ -174,7 +174,7 @@ A device may lose its long-term key after an OS reinstall, a disk corruption, an
 
 The specifics for client storage of long-term keys are detailed in Section~\ref{subsec:lks}.
 
-\subsection{Join/Leave Protocol flow}
+\subsection{Join/Leave Protocol flow}\label{subsec:joinleave}
 We assume each meeting is identified by its unique $\meetingID$, as in the current system. Each meeting gets its own ``bulletin board'' that's accessible to everyone who has server-gated access to the meeting. The server clears it when the meeting ends. Note that meetings can be ended then later restarted, and a meeting ID can refer to a standing or repeating meeting.
 
 From a cryptographic perspective, the server is free to tamper with all values posted on the bulletin board. In Section~\ref{subsec:secprop}, we describe further that a malicious server that sends stale messages from a previous meeting incarnation can at best deny service, which it can do regardless.
@@ -279,7 +279,7 @@ When any participant $i$ joins the meeting, whether before or after it starts, a
 \end{enumerate*}
 \endgroup
 
-\subsubsection{Leader Join}
+\subsubsection{Leader Join}\label{subsubsec:leaderjoin}
 
 When the leader joins the meeting $\meetingID$, they:
 

@@ -225,14 +225,14 @@ compromised.
 
 A user’s set of devices is also of interest to their meeting partners, because not all devices
 associated with a user may be trusted equally. If Bob is in a meeting with Alice's work computer
-today, he can trust the connection (i.e., that there is no MitM) by either checking the meeting
+today, he can trust the connection (i.e., that there is no MitM) by either checking the
 security code or by noticing that Alice’s public key is the same as was used in all past meetings
 Bob had with Alice. This way, Bob only has to trust that there was no MitM the first time the
 connection was established, and from that assumption deduce that all meetings where Alice has the
 same public key are also secure. This assumption is commonly referred to as Trust-On-First-Use
 (TOFU). If tomorrow, Bob meets with Alice's new mobile phone, Bob might not trust its key as much as
 her work computer’s: a malicious server could have added it, or a hacker could have stolen Alice's
-Zoom password. It'd be unfortunate if they had to recheck the meeting security code. By performing
+Zoom password. It'd be unfortunate if they had to recheck the security code. By performing
 a $\batchapprove{}$ operation from her work computer, Alice can indicate that all of her other
 devices are trusted, so Bob (who trusts the public key on Alice’s work laptop) can use the signed
 $\batchapprove{}$ statement to extend this trust to Alice's new mobile phone’s key.
@@ -393,16 +393,13 @@ link is a compact commitment to the entire sigchain state. Each sigchain link
 also contains an incrementing sequence number. We refer to an object consisting of the sigchain type, the
 last link’s sequence number, and the last link's hash as the \textit{sigchain tail}:
 
-\begingroup{}
-\fontsize{10pt}{12pt}\selectfont{}
-\begin{verbatim}
+\begin{Verbatim}
 {
   "sigchainType": "User",
   "lastSequenceNumber": 15,
   "lastLinkHash": "484ad7..."
 }
-\end{verbatim}
-\endgroup{}
+\end{Verbatim}
 
 When clients want to update their view of a sigchain from the server, they can just query for the
 new links and ensure that the first new link contains a previous hash matching the cached tail.
@@ -416,10 +413,8 @@ should be able to fully audit the history of past email addresses stored in thei
 participants might only need to see the most recent one to display it in the UI\@. For this reason,
 rather than being directly encoded, sensitive information on a sigchain link is stored as a
 commitment: rather than \texttt{alice@example.com}, a sigchain link could contain
-
 $$\mathsf{COMMIT}(\texttt{alice@example.com}) =
     \mathsf{HMAC}(\mathsf{randomKey}, \texttt{alice@example.com}).$$
-
 The server gives all users the entire sigchain link so that they can check that its signatures and
 hashes are valid, but only Alice’s devices will receive the plaintext email addresses and 32-byte
 random keys corresponding to previous email addresses. \textsf{COMMIT} can also be used to
@@ -469,15 +464,14 @@ email addresses that will be displayed in the meeting UI\@. Two users can switch
 but the server will prove that two users do not have the same email address at the same time. An
 \textsf{EmailChange} link will have the following fields:
 
-\begingroup{}
-\fontsize{10pt}{12pt}\selectfont{}
-\begin{verbatim}
+
+\begin{Verbatim}
 {
   "sigchainType": "User",
   "linkType": "EmailChange",
   "sequenceNumber": 10,
   "prev": "484ad7...",
-  "timestamp": 1597766886,
+  "cloudName": "commercial",
 
   "userID": "ebc0d2...",
 
@@ -486,13 +480,13 @@ but the server will prove that two users do not have the same email address at t
     "emailChainSequenceNumber": 5
   })
 }
-\end{verbatim}
-\endgroup{}
+\end{Verbatim}
 
-The first five fields are common to every sigchain link, and every user sigchain link specifies the
-\userID as well. Each link includes both a consecutive \textsf{sequenceNumber} (starting from 1 for
-the first link), as well as the (canonical) hash of the previous link in the chain (in this case,
-the one with sequence number 9). The timestamp is the time at which this link was generated.
+The first six fields are common to every sigchain link. \textsf{sequenceNumber} is an incrementing counter that starts from 1 for the first link, \textsf{prev} is the (canonical) hash of the previous link in the chain (in this case,
+the one with sequence number 9), and \textsf{cloudName}
+specifies which cloud the sigchain belongs to.
+
+Every user sigchain link also specifies the \userID.
 
 Here, the \textsf{email} field specifies the new email address to be associated with this user,
 which supersedes any previous email. Every time an \textsf{EmailChange} link associates this user
@@ -506,9 +500,7 @@ not have any signatures (i.e., they can be inserted into sigchains by the Zoom s
 \paragraph{AccountChange.} Users can also transfer between accounts, similarly to how they can
 switch emails.
 
-\begingroup{}
-\fontsize{10pt}{12pt}\selectfont{}
-\begin{verbatim}
+\begin{Verbatim}
 {
   "sigchainType": "User",
   "linkType": "AccountChange",
@@ -519,8 +511,7 @@ switch emails.
     "additionIndex": 5
   })
 }
-\end{verbatim}
-\endgroup{}
+\end{Verbatim}
 
 Since multiple users can be added to a membership sigchain in a single link,
 \textsf{additionIndex} specifies the corresponding position in that link. If a user
@@ -533,9 +524,7 @@ not have any signatures. Users will be notified when their account changes.
 \paragraph{DeviceAdd.} A device addition link specifies the long-term public device keys for the new
 device and a human-readable name:
 
-\begingroup{}
-\fontsize{10pt}{12pt}\selectfont{}
-\begin{verbatim}
+\begin{Verbatim}
 {
   "sigchainType": "User",
   "linkType": "DeviceAdd",
@@ -558,8 +547,7 @@ device and a human-readable name:
      ...
   ]
 }
-\end{verbatim}
-\endgroup{}
+\end{Verbatim}
 
 This link specifies a device identifier (unique among the devices associated with this user), a
 signing public key, an encryption public key, as well as a device name. Note that the device name is
@@ -601,8 +589,9 @@ This link is signed by the device's previous public key in addition to the new k
 
 \paragraph{BatchApprove.} A $\batchapprove{}$ link lets a device indicate that it trusts the
 validity of all devices created after that device until the point in the sigchain where the
-$\batchapprove{}$ link appears. To reduce the number of sigchain links,
-the user can also specify a list of devices to revoke within this link.
+$\batchapprove{}$ link appears. To reduce the number of sigchain links, the user can also specify a
+list of devices to revoke within this link. The link can specify a new set of PUKs, and this is
+required if any devices are being revoked.
 
 This link is signed by the approving device, and can be used to construct a trust graph as described
 in Section~\ref{p2:multidev}.
@@ -624,9 +613,7 @@ users should be able to audit whether at any point their email has been associat
 user. We record the mapping between an email and the corresponding {\userID}s in an email sigchain.
 These sigchains only have one kind of link, \textsf{UserIDChange}.
 
-\begingroup{}
-\fontsize{10pt}{12pt}\selectfont{}
-\begin{verbatim}
+\begin{Verbatim}
 {
   "sigchainType": "Email",
   "linkType": "UserIDChange",
@@ -638,8 +625,7 @@ These sigchains only have one kind of link, \textsf{UserIDChange}.
     "userChainSequenceNumber": 9
    })
 }
-\end{verbatim}
-\endgroup{}
+\end{Verbatim}
 
 The \textsf{userChainSequenceNumber} refers to the position in the user sigchain of the corresponding
 \textsf{EmailChange} link (or the initial \textsf{DeviceAdd} link).
@@ -652,9 +638,7 @@ Account sigchains consists of two kinds of links, which record the identity prov
 each account is using. \textsf{IDPUpdate} links contain the domain name of the \idp (say
 \texttt{examplecorp.generic-idp.com}). {\idp}s should not use the same domain for multiple accounts to prevent equivocation of their attestations.
 
-\begingroup{}
-\fontsize{10pt}{12pt}\selectfont{}
-\begin{verbatim}
+\begin{Verbatim}
 {
   "sigchainType": "Account",
   "linkType": "IDPUpdate",
@@ -663,17 +647,14 @@ each account is using. \textsf{IDPUpdate} links contain the domain name of the \
 
   "idpDomain": "examplecorp.generic-idp.com"
 }
-\end{verbatim}
-\endgroup{}
+\end{Verbatim}
 
 \textsf{ADNChange} links associate an ADN with the account. Only the latest \textsf{ADNChange} link
 is considered valid, and each one corresponds to an \textsf{AccountIDChange} link in the appropriate
 ADN sigchain. If an account is no longer using an ADN, the \textsf{adnChange} section specifies ADN
 \texttt{null} and the other field is omitted.
 
-\begingroup{}
-\fontsize{10pt}{12pt}\selectfont{}
-\begin{verbatim}
+\begin{Verbatim}
 {
   "sigchainType": "Account",
   "linkType": "ADNChange",
@@ -685,8 +666,7 @@ ADN sigchain. If an account is no longer using an ADN, the \textsf{adnChange} se
     "adnChainSequenceNumber": 9
   })
 }
-\end{verbatim}
-\endgroup{}
+\end{Verbatim}
 
 Links in account sigchains do not require any signatures.
 
@@ -696,9 +676,7 @@ ADN sigchains track which \accountID a specific Account Domain Name is associate
 only one type of link, \textsf{AccountIDChange}, which corresponds to and points to an
 \textsf{ADNChange} link in the account sigchain for the appropriate \accountID:
 
-\begingroup{}
-\fontsize{10pt}{12pt}\selectfont{}
-\begin{verbatim}
+\begin{Verbatim}
 {
   "sigchainType": "ADN",
   "linkType": "AccountIDChange",
@@ -710,8 +688,7 @@ only one type of link, \textsf{AccountIDChange}, which corresponds to and points
     "accountChainSequenceNumber": 29
   })
 }
-\end{verbatim}
-\endgroup{}
+\end{Verbatim}
 
 Links in ADN sigchains do not require any signatures.
 
@@ -720,9 +697,7 @@ Links in ADN sigchains do not require any signatures.
 Membership sigchains record changes to the set of users which are part of each account. They
 have a single type of link, \textsf{ChangeMembers}:
 
-\begingroup{}
-\fontsize{10pt}{12pt}\selectfont{}
-\begin{verbatim}
+\begin{Verbatim}
 {
   "sigchainType": "Membership",
   "linkType": "ChangeMembers",
@@ -734,10 +709,6 @@ have a single type of link, \textsf{ChangeMembers}:
       "userID": "db2f1c...",
       "userChainSequenceNumber": 9,
     }),
-    COMMIT({
-      "userID": "1c2dbc...",
-      "userChainSequenceNumber": 29,
-    }),
     ...
   ],
   "removed": [
@@ -748,8 +719,8 @@ have a single type of link, \textsf{ChangeMembers}:
     ...
   ]
 }
-\end{verbatim}
-\endgroup{}
+\end{Verbatim}
+
 Each link can add or remove multiple users. Each user is hidden behind a commitment so that it is
 possible to prove that an individual user is part of an account without also leaking the {\userID}s
 of the other members that are being added as part of the same link. Hiding the {\userID}s of the
@@ -831,22 +802,18 @@ In order to associate an account to its \idp, we will rely on TLS\@. Accounts wi
 host a JSON object at the root of the subdomain \texttt{idp-config.well-known.} of
 the ADN, e.g., \texttt{https://idp-config.well-known.example.org}.
 
-The JSON object contains a field \texttt{us.zoom.idp}
-that points to the unique domain that the \idp has reserved for this account. For example, if
-\texttt{example.org} is using \texttt{generic-idp.com} as their identity provider, the object might look
-like:
+The JSON object contains a field with key \texttt{us.zoom.idp.<CLOUD\_NAME>} whose value points to the unique domain
+that the \idp has reserved for this account. For example, if \texttt{example.org} is using \texttt{generic-idp.com} as
+their identity provider and has an account hosted on the Zoom commercial cloud, the object might look like:
 
-\begingroup{}
-\fontsize{10pt}{12pt}\selectfont{}
-\begin{verbatim}
+\begin{Verbatim}
 {
-    "us.zoom.idp": "examplecorp.generic-idp.com"
+    "us.zoom.idp.commercial": "examplecorp.generic-idp.com"
 }
-\end{verbatim}
-\endgroup{}
+\end{Verbatim}
 
-Since accounts are expected to change their \idp rarely, clients can cache this mapping
-aggressively.
+Specifying the cloud in the field name allows to support ADNs configuring different IDPs for different clouds. Note that
+since accounts are expected to change their \idp rarely, clients can cache this mapping aggressively.
 
 If the endpoint does not return a valid response, clients will assume there is no \idp and not
 display any identifiers for this user. Because Zoom will proxy client connections to ADNs to avoid
@@ -888,9 +855,7 @@ Our modified OIDC ID token (which will also be referred to as an \idp attestatio
 Web Token (JWT) data structure which contains claims about a user’s Zoom identity. The payload might
 look like the following:
 
-\begingroup{}
-\fontsize{10pt}{12pt}\selectfont{}
-\begin{verbatim}
+\begin{Verbatim}
 {
   "iss": "https://examplecorp.generic-idp.com", // issuer
 
@@ -904,8 +869,7 @@ look like the following:
 
   [...]
 }
-\end{verbatim}
-\endgroup{}
+\end{Verbatim}
 
 The token contains an issuer field which identifies the OIDC issuer of the token (the \idp). In
 order for Zoom clients to accept an identity claim, the issuer field must match the domain that
