@@ -424,9 +424,11 @@ as well as the plaintext data, and the signature over the link will still verify
 \subsubsection{Overview of Sigchain Types}
 
 Zoom devices, users, and accounts are each internally identified by unique immutable identifiers
-called \deviceid, \userID and \accountID respectively. Each device, user, and account is also
-associated with more user-friendly (but mutable) identifiers: respectively, device names, email
-addresses, and ADNs.
+called \deviceid, \userID and \accountID respectively. The \deviceid is generated randomly for each
+new device, while the \userID and \accountID are assigned by the server.
+
+Each device, user, and account is also associated with more user-friendly (but mutable) identifiers: respectively,
+device names, email addresses, and ADNs.
 
 Representing these different components and their relationships requires different types of
 sigchains:

@@ -21,7 +21,10 @@ It's important to note each $\mk$ is independently generated, so knowing the pre
 
 \subsubsection{Leader Participant List}\label{subsubsec:lpl}
 
-A meeting leader maintains a ``leader participant list'' ($\LPL$) tabulating all the users in the meeting. For each user currently in the meeting, the $\LPL$ keeps track of a hash over their $\binding_i$, which includes their $IVK_i$, $pk_i$, $\userID$, and $\deviceid$, as well as their display name. For users who have left the meeting, the $\LPL$ tracks only their $\userID$, $\deviceid$, $\ivk_i$, and display name.
+A meeting leader maintains a ``leader participant list'' ($\LPL$) tabulating all the users in the meeting. For each user
+currently in the meeting, the $\LPL$ keeps track of a hash over their $\binding_i$, which includes their $IVK_i$,
+$pk_i$, $\userID$, and $\hardwareid$, as well as their display name. For users who have left the meeting, the $\LPL$
+tracks only their $\userID$, $\hardwareid$, $\ivk_i$, and display name.
 
 The $\LPL$ is used to drive the participant list in the user interface, which records both users
 currently in the meeting and those who have left. It is possible that race conditions during leader
@@ -49,7 +52,9 @@ By replaying the sequence of operations in the bulletin board, the other partici
 
 When a leader does drop out of a meeting, the Zoom server picks a new leader arbitrarily and sends a signal to participants indicating that the leader has changed. The new leader then coalesces the chain as described above, and other participants verify that the new leader is present in the new $\LPL$.
 
-For users in the meeting, clients remember the mapping between $(\userID, \deviceid)$ and hash over the corresponding $\binding_i$, and ensure that the hash remains stable across new links and leader changes. If a user leaves the meeting, it is enforced that any user who rejoins with the same $\userID$ and $\deviceid$ must have the same $\ivk_i$, but not necessarily the same $\pk_i$. These guarantees persist only over the course of a single meeting.
+For users in the meeting, clients remember the mapping between $(\userID, \hardwareid)$ and hash over the corresponding
+$\binding_i$, and ensure that the hash remains stable across new links and leader changes. If a user leaves the meeting,
+it is enforced that any user who rejoins with the same $\userID$ and $\hardwareid$ must have the same $\ivk_i$, but not necessarily the same $\pk_i$. These guarantees persist only over the course of a single meeting.
 
 \subsubsection{Locked Meetings}
 \label{subsubsec:lockedmeetings}
