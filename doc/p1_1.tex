@@ -166,7 +166,9 @@ When user $i$ signs up, or upgrades their Zoom application to the first version 
 (\ivk_i, \isk_i) \leftarrow \zoomsignkeygen()
 \]
 
-The Zoom client posts the mapping $\langle (i, \deviceid) \rightarrow \ivk_i \rangle$ to the server, signed with $\zoomsignsign$ under $\isk_i$. This self-signed binding becomes available to those who join user $i$ in meetings.
+The Zoom client posts the mapping $\langle (i, \hardwareid) \rightarrow \ivk_i \rangle$ to the server, signed with
+$\zoomsignsign$ under $\isk_i$. This self-signed binding becomes available to those who join user $i$ in meetings.
+$\hardwareid$ is a client-generated identifier dependent on the device's hardware.
 
 The client will persist this keypair indefinitely on this device and secure $\isk_i$ using whatever mechanisms the local hardware and operating system provide. Of course, $\isk_i$ never leaves the device and must be excluded from any cloud backups.
 
@@ -255,7 +257,7 @@ Figure~\ref{fig:ladder} describes the basic flow of a leader admitting a partici
 \label{subsubsec:servercert}
 
 When a client $i$ joins a meeting, the Zoom server signs a statement
-$\sig^i_{\mathsf{Server}}$ indicating that the client's $\userID$, $\deviceid$,
+$\sig^i_{\mathsf{Server}}$ indicating that the client's $\userID$, $\hardwareid$,
 and $\ivk$ are authorized.
 
 We'll use certificate pinning to strengthen the security of the server signature. Zoom clients will ship with a DigiCert root certificate and they will only trust certificates authorized for a specific Zoom domain via a certificate chain originating from the DigiCert root. Hardware Security Modules (HSMs) are used to manage keys for an internal intermediate CA, which will in turn attest to the servers' signing keys. Server keys are valid for a week and are rotated daily. In order to detect certificate revocation in the event of CA or server compromise, clients require stapled OCSP responses on the intermediate certificates they receive.
@@ -271,7 +273,7 @@ When any participant $i$ joins the meeting, whether before or after it starts, a
 \begin{enumerate*}
 \item Generates new public-key \textit{ephemeral} encryption keypair: $(\pk_i, \sk_i) = \cboxkeygen()$.
 \item Queries the Zoom infrastructure for the server-generated $\meetingUUID$ for this instance of this meeting; this is server-generated per-meeting-instance randomness that the individual participants cannot control.
-\item Computes $\binding_i \leftarrow \left( \meetingID \| \allowbreak \meetingUUID \| i \allowbreak \| \deviceid \| \ivk_i \| \allowbreak \pk_i \right)$.
+\item Computes $\binding_i \leftarrow \left( \meetingID \| \allowbreak \meetingUUID \| i \allowbreak \| \hardwareid \| \ivk_i \| \allowbreak \pk_i \right)$.
 \item Defines $\context \leftarrow \texttt{"Zoombase-1-ClientOnly-Sig-EncryptionKeyAnnouncement"}$.
 \item Computes $\sig_i \leftarrow \zoomsignsign(\isk_i, \context, \binding_i)$.
 \item Stores $\sk_i$ for the duration of the meeting.
@@ -299,14 +301,14 @@ whenever the key changes as described in Section~\ref{subsubsec:keyrotation}.
 \subsubsection{Participant Join (Leader)}
 \label{subsubsec:participantjoinleader}
 
-Given a leader $\LL$ and a participant $i$ joining meeting $\meetingID$ on $\deviceid$, the leader:
+Given a leader $\LL$ and a participant $i$ joining meeting $\meetingID$ on $\hardwareid$, the leader:
 
 \begingroup
 \RaggedRight
 \begin{enumerate*}
 \item Fetches $\ivk_i$ from the key server.
 \item Fetches $\sig_i$ and $\pk_i$ from the meeting's ``bulletin board''.
-\item Computes $\binding_i \leftarrow \left( \meetingID \| \allowbreak \meetingUUID \| i \allowbreak \| \deviceid \| \ivk_i \| \allowbreak \pk_i \right)$.
+\item Computes $\binding_i \leftarrow \left( \meetingID \| \allowbreak \meetingUUID \| i \allowbreak \| \hardwareid \| \ivk_i \| \allowbreak \pk_i \right)$.
 \item Defines $\textsf{Context}_\textsf{sign} \leftarrow \texttt{"Zoombase-1-ClientOnly-Sig-EncryptionKeyAnnouncement"}$.
 \item Verifies the signature: $\zoomsignverify(\ivk_i, \sig_i, \textsf{Context}_\textsf{sign}, \binding_i)$.
 \item If verification fails, it aborts.
@@ -332,7 +334,7 @@ When participant $i$ joins meeting $\meetingID$, it performs the reverse of the 
 \item Fetches $\sig_{\LL}$ and $\pk_\LL$ from the meeting's ``bulletin board''.
 \item Fetches $(i, \ciphertext_i)$ from the ``bulletin board''.
 \item Fetches the $\meetingUUID$ from the server.
-\item Computes $\binding_\LL \leftarrow \left( \meetingID \| \allowbreak \meetingUUID \| \LL \allowbreak \| \deviceid \| \ivk_\LL \| \allowbreak \pk_\LL \right)$.
+\item Computes $\binding_\LL \leftarrow \left( \meetingID \| \allowbreak \meetingUUID \| \LL \allowbreak \| \hardwareid \| \ivk_\LL \| \allowbreak \pk_\LL \right)$.
 \item Defines $\textsf{Context}_\textsf{sign} \leftarrow \texttt{"Zoombase-1-ClientOnly-Sig-EncryptionKeyAnnouncement"}$.
 \item Verifies the signature: $\zoomsignverify(\ivk_{\LL}, \sig_\LL, \textsf{Context}_\textsf{sign}, \binding_\LL)$.
 \item If verification fails, it aborts.

@@ -1,6 +1,11 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [v3.2] - 2021-10-29
+### Added
+- Distinguished between hardware ids in Phase I and device ids in Phase II
+- Clarified the generation of hardware ids, device ids, user ids, and account ids
+
 ## [v3.1] - 2021-10-05
 ### Added
 - New section on Zoom Phone in Phase I
@@ -19,7 +24,7 @@ All notable changes to this project will be documented in this file.
 - Provide more context for the choice of our authenticated encryption algorithms
 - Clarify that we are considering to reintroduce a secure version of the Cloud Recording feature
 - Clarify that in Phase 1 display names should not be relied upon to establish a meeting participant's identity
-- Clarify the security guarantees of the feature described in the Local Key Security section 
+- Clarify the security guarantees of the feature described in the Local Key Security section
 ### Removed
 - Multiple ZTTs in Phase III. We will use a single one (per cloud infrastructure) instead.
 
