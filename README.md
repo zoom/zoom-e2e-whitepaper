@@ -6,6 +6,7 @@ feedback, recommendation and corrections. Please continue to post them under
 [Issues](https://github.com/zoom/zoom-e2e-whitepaper/issues).
 
 ## Timeline
+- **18 July 2022**: [Version 3.3](./archive/zoom_e2e_v3_3.pdf) was published.
 - **29 October 2021**: [Version 3.2](./archive/zoom_e2e_v3_2.pdf) was published.
 - **5 October 2021**: [Version 3.1](./archive/zoom_e2e_v3_1.pdf) was published.
 - **15 December 2020**: [Version 3](./archive/zoom_e2e_v3.pdf) was published.
