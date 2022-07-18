@@ -1,6 +1,13 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [v3.3] - 2022-07-18
+### Added
+- Description of E2EE Breakout Rooms in Phase I, available since 5.11.3
+- An additional author: Armin Namavari
+### Changed
+- Separated the roles of meeting leader and meeting host
+
 ## [v3.2] - 2021-10-29
 ### Added
 - Distinguished between hardware ids in Phase I and device ids in Phase II

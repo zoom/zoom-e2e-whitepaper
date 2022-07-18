@@ -94,6 +94,64 @@ changing the meeting leader over the course of a meeting without being detected.
 
 We considered other approaches to the meeting leader security code, such as mixing more of the handshake data into the displayed code. While more mixins would be more robust to attacks that try to confuse participants by mixing members from different meetings, we see a UX advantage of ``one leader, one code.''
 
+\subsection{E2E Encryption for Breakout Rooms}
+\label{subsec:bor}
+The Breakout Rooms feature allows splitting a Zoom meeting into multiple sub-meetings. The host can
+assign participants to rooms, or allow them to choose the room that they want to join, and can
+broadcast chat messages to all breakout rooms at once. While main meeting participants (including
+the host) do not have access to meeting content from breakout rooms that they are not a participant
+of, the host does receive some metadata about the ``activity status’’ of participants in each
+breakout room to help them monitor engagement, including for example whether participants have their
+video on, are using reactions, or sharing their screen.
+
+In E2EE meetings, we implement Breakout Rooms by having each room function as its own independent
+meeting, with its own leader, participant list, and sequence of meeting keys. As users leave the
+main meeting and join a breakout room, both meetings rotate their keys. In addition, after they join
+a breakout room, participants are also re-added by the leader to the main meeting so that they can
+keep decrypting messages broadcast by the main meeting host. Since they continue to have access to
+the meeting key, breakout room participants are still part of the main meeting LPL, but the
+participants panel of the meeting UX indicates that they are ``In a breakout room''. If the main
+meeting is locked, participants are still able to go in and out of it to join breakout rooms, as the
+leader of the main meeting will let them back in given that they keep the same $\ivk$ (as explained
+in Section~\ref{subsubsec:lockedmeetings}). 
+
+Users in a breakout room can check the security codes with the breakout room leader to ensure that
+there are no MitM attacks on the breakout room itself. Since there is no cryptographically enforced
+relationship between the main meeting and breakout rooms, such as the fact that the assignments of
+people to rooms reflect the intentions of the meeting host, breakout room participants should also
+make sure that other participants in their breakout room are expected to be there before discussing
+sensitive matters (as in regular meetings). However, breakout room participants cannot see the main
+meeting's leader security code, and are not notified if the leader of the main meeting changes while
+they are in a breakout room. Therefore, an active Insider could add a breakout room participant to a
+different main meeting when they try to rejoin it after entering a breakout room. Then, the attacker
+could broadcast messages to that participant which would appear to come from the original host of
+the main meeting (this would work even if the main meeting were locked). As such, users worried
+about active attacks from Insiders should be suspicious of broadcast messages received while in a
+breakout room. 
+
+An attacker might also try to join an unlocked main meeting and immediately go to a breakout room to
+avoid being identified by having to turn their camera on or being asked to check security codes. The
+attacker could use the same display name and picture of another meeting participant, either one who
+recently left the meeting or one that the attacker has kicked out themselves (by controlling the
+network or the Zoom infrastructure). In this case, the same participant name would appear twice as
+``left’’ and ``In a breakout room’’ in the participant list, which may be hard for other
+participants or the leader to spot. While analogous attacks are possible even when breakout rooms
+are not in use, they might be harder to recognize and act on in this scenario: for example,
+participants in a breakout room do not get a video tile in the gallery view. We recommend that all
+meeting participants carefully monitor the participant list, and that hosts lock their meeting
+whenever possible.
+
+Finally, when participants leave a breakout room to rejoin the main meeting, an Insider might trick
+them into joining a different main meeting than the original one (even if the latter were locked).
+As such, when switching between the main meeting and breakout rooms, all participants should recheck
+leader security codes.
+
+In future updates, we plan to further strengthen the guarantees offered by this feature, by not
+making participants leave and then rejoin the main meeting when entering or exiting breakout rooms,
+and having breakout room participants enforce that other participants of their breakout room are
+also listed in the main meeting’s participant list. This will better mitigate the risks above, and
+require less trust in the Zoom server when using E2EE Breakout Rooms.
+
 \subsection{Changes to symmetric encryption}
 Symmetric encryption in Zoom meetings will use AES-GCM with unique per-stream keys. As in the current design, all keys will be derived using a secure key derivation function (KDF) from a per-meeting Meeting Key ($\MK$). The meeting leader may rotate $\MK$ throughout the meeting.
 
@@ -130,22 +188,28 @@ as when the leader is sharing their screen. In the following phases, a stronger 
 will be leveraged to highlight potential eavesdroppers in the UI, such as those outside of the
 host's organization or guest users.
 
-A leader's view of the ``active'' participants list shows everyone who is in the meeting
-(i.e., everyone who has been given current meeting key, or the next one if a key rotation is in
-progress). If the host observes the same user leaving the meeting four or more times, the participant
-list will reflect the number of observed leaves. This alert helps participants notice when an attacker repeatedly joins and leaves a meeting rapidly, which would allow the attacker to learn most of the meeting keys but remain in the ``left'' column for the majority of the meeting. Due to the distributed nature of the
-system, this view of the participant list can be slightly out of date, both for the leader and for
-the other participants, but will eventually converge if there is a long enough span without
-participant churn. Some race conditions, such as participants quickly joining and leaving a meeting
-while the meeting leader is changing, might also cause participants who left a meeting to not be
-reflected in the ``left'' section of the participant list. This is necessary to guarantee a smooth
-meeting experience under poor network conditions. Heartbeat messages ensure that a key is rotated in
-a timely manner after an unwelcome participant has been removed from the meeting.
+A leader's view of the ``active'' participants list shows everyone who is in the meeting (i.e.,
+everyone who has been given current meeting key, or the next one if a key rotation is in progress).
+If the host observes the same user leaving the meeting four or more times, the participant list will
+reflect the number of observed leaves. This alert helps participants notice when an attacker
+repeatedly joins and leaves a meeting rapidly, which would allow the attacker to learn most of the
+meeting keys but remain in the ``left'' column for the majority of the meeting. Due to the
+distributed nature of the system, this view of the participant list can be slightly out of date,
+both for the leader and for the other participants, but will eventually converge if there is a long
+enough span without participant churn. Some race conditions, such as participants quickly joining
+and leaving a meeting while the meeting leader is changing, might also cause participants who left a
+meeting to not be reflected in the ``left'' section of the participant list. This is necessary to
+guarantee a smooth meeting experience under poor network conditions. Heartbeat messages ensure that
+a key is rotated in a timely manner after an unwelcome participant has been removed from the
+meeting.
 
 An active attacker can also try to perform a MitM attack against the meeting. This class of attacks
 is mitigated by the meeting leader security code, which should be re-checked every time a
-participant joins (or re-joins) the meeting, or whenever the meeting leader security code changes as
-indicated by a UI notification. 
+participant joins or rejoins the meeting (including when moving in and out of breakout rooms), or
+whenever the meeting leader security code changes as indicated by a UI notification. We stress that,
+as discussed in Section~\ref{subsec:bor}, when in an E2EE meeting using Breakout Rooms, participants
+should be skeptical of broadcast messages from the meeting host and should carefully monitor the
+participant list of the main meeting.
 
 \subsection{Local Key Security}
 \label{subsec:lks}
