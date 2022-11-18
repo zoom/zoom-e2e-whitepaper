@@ -1,0 +1,470 @@
+\subsection{Consistent Identities With Sigchains}
+\label{subsec:sigchains}
+
+Both accounts and users have states that change over time. An account can change its identity
+provider or its ADN, and a user can change their email address or add and remove devices.
+
+We need to keep track of states that change over time in a way that is auditable. To do so, we
+describe the sequence of changes in a data structure called a signed hashchain, or
+\textit{sigchain}.
+
+Once a client learns of a sigchain, the only changes to this chain that will be considered valid are
+extensions of the sequence. Since changes cannot be ``forgotten,'' the Zoom server cannot rewrite
+history.
+
+Still, this model doesn't force the Zoom server to be consistent across different devices it talks
+to. We will add a transparency layer called the Zoom Transparency Tree (Section~\ref{sec:ztt}) to
+ensure that the Zoom server must present the same information about sigchains to all users.
+
+\subsubsection{Sigchains}
+
+A sigchain is a sequence of statements (called \textit{links}), where each link includes a
+collision-resistant hash of the previous link. These links can be thought of as state transitions
+that modify an object (the sigchain state). For a user sigchain, the sigchain state contains the
+list of active devices, the list of revoked devices, the trust graph, and the list of email
+addresses and accounts historically associated with the user.
+
+In order to accept a transition as valid, clients check that it satisfies several conditions,
+including that:
+
+\begin{enumerate}
+\item The link is of a known type.
+\item The link has the correct fields for that type.
+\item The transition is admissible given the current state.
+\item The link correctly includes the hash of the previous link.
+\item Some links require cryptographic signatures by the devices authorizing the transition to be
+    considered valid. In these cases, the signatures are encoded as part of the links to compute
+    link hashes.
+\end{enumerate}
+
+Examples of admissibility rules for a user sigchain include that a device can only be revoked if it
+was active in the previous state, and that signatures over revocation links must be by a device that
+was active in the previous state.
+
+Since each of the links in a sigchain contains a hash of the previous link, the hash of the last
+link is a compact commitment to the entire sigchain state. Each sigchain link also contains an
+incrementing sequence number. We refer to an object consisting of the sigchain type, the last link's
+sequence number, and the last link's hash as the \textit{sigchain tail}:
+
+\begin{Verbatim}
+{
+  "sigchainType": "User",
+  "lastSequenceNumber": 15,
+  "lastLinkHash": "484ad7..."
+}
+\end{Verbatim}
+
+When clients want to update their view of a sigchain from the server, they can just query for the
+new links and ensure that the first new link contains a previous hash matching the cached tail.
+
+Note that the examples of objects in this document are encoded in JSON and simplified for ease of
+exposition. The actual implementation may use different application encodings and data structures.
+
+Different applications require different levels of access to sigchains. For example, although a user
+should be able to fully audit the history of past email addresses stored in their sigchain, meeting
+participants might only need to see the most recent one to display it in the UI\@. For this reason,
+rather than being directly encoded, sensitive information on a sigchain link is stored as a
+commitment: rather than \texttt{alice@example.com}, a sigchain link could contain
+$$\mathsf{COMMIT}(\texttt{alice@example.com}) =
+    \mathsf{HMAC}(\mathsf{randomKey}, \texttt{alice@example.com}).$$ %
+The server gives all users the entire sigchain link so that they can check that its signatures
+and hashes are valid, but only Alice's devices will receive the plaintext email addresses and
+32-byte random keys corresponding to previous email addresses. \textsf{COMMIT} can also be used
+to selectively delete parts of links such as device names: a server can throw away the random
+HMAC key as well as the plaintext data, and the signature over the link will still verify.
+
+\subsubsection{Overview of Sigchain Types}
+
+Zoom devices, users, and accounts are each internally identified by unique immutable identifiers
+called \deviceid, \userID, and \accountID respectively. The \deviceid is generated randomly for each
+new device, while the \userID and \accountID are assigned by the server.
+
+Each device, user, and account is also associated with more user-friendly (but mutable) identifiers:
+respectively, device names, email addresses, and ADNs.
+
+Representing these different components and their relationships requires different types of
+sigchains:
+
+\begin{enumerate}
+\item User sigchains store, for each \userID, information related to that user's identity, such as
+    the user's email address, \accountID, and the set of their devices and their trust
+    relationships.
+\item Email sigchains store, for each email address, the associated \userID.
+\item Account sigchains store, for each \accountID, both the ADN and identity provider associated with
+    the account.
+\item ADN sigchains keep track of, for each domain name, the \accountID to which the domain is
+    associated.
+\item Membership sigchains keep track of, for each \accountID, the {\userID}s within the account.
+\end{enumerate}
+
+Note that some of the information stored on these sigchains is redundant: for example, a mapping
+between an email and the corresponding \userID is recorded both in a user sigchain and in an email
+sigchain. This is necessary so that the server cannot claim that two separate {\userID}s are
+associated with the same email address at the same time. Accordingly, some operations will cause
+multiple chains to be updated at the same time.
+
+As detailed earlier, every Zoom user is part of an account. As potential optimizations, if this
+account only has a single user and doesn't have an ADN, then that user's sigchain might not mention
+their \accountID, and there would be no corresponding account or membership sigchains until the
+account either gets another user or an ADN.
+
+\subsubsection{User Sigchains}
+ \label{subsubsec:usersigchains}
+User sigchains record changes to a user's identity. There are several types of user sigchain links,
+each representing a different way to change a user's identity.
+
+\paragraph{EmailChange.} As mentioned in Section~\ref{subsec:displayid}, users can set and change the
+email addresses that will be displayed for or used to communicate with other users. Two users can switch email addresses,
+but the server will prove that two users do not have the same email address at the same time. An
+\textsf{EmailChange} link will have the following fields:
+
+
+\begin{Verbatim}
+{
+  "sigchainType": "User",
+  "linkType": "EmailChange",
+  "sequenceNumber": 10,
+  "prev": "484ad7...",
+  "cloudName": "commercial",
+
+  "userID": "ebc0d2...",
+
+  "emailChange": COMMIT({
+    "email": "alice@example.com",
+    "emailChainSequenceNumber": 5
+  })
+}
+\end{Verbatim}
+
+The first six fields are common to every sigchain link. \textsf{sequenceNumber} is an incrementing
+counter that starts from 1 for the first link, \textsf{prev} is the (canonical) hash of the previous
+link in the chain (in this case, the one with sequence number 9), and \textsf{cloudName} specifies
+which cloud the sigchain belongs to.
+
+Every user sigchain link also specifies the \userID.
+
+Here, the \textsf{email} field specifies the new email address to be associated with this user,
+which supersedes any previous email. Every time an \textsf{EmailChange} link associates this user
+with a new email, the email sigchain for that email address is also extended with a corresponding
+\textsf{UserIDChange} link referring to this user's \userID, and the sequence number of that link is
+reported in this link as \textsf{emailChainSequenceNumber}.
+
+Because the Zoom website can be used to change one's email address, \textsf{EmailChange} links do
+not have any signatures (i.e., they can be inserted into sigchains by the Zoom server).
+
+\paragraph{AccountChange.} Users can also transfer between accounts, similarly to how they can
+switch emails.
+
+\begin{Verbatim}
+{
+  "sigchainType": "User",
+  "linkType": "AccountChange",
+  ...
+  "accountChange": COMMIT({
+    "accountID": "c2d8aa...",
+    "membershipChainSequenceNumber": 12,
+    "additionIndex": 5
+  })
+}
+\end{Verbatim}
+
+Since multiple users can be added to a membership sigchain in a single link, \textsf{additionIndex}
+specifies the corresponding position in that link. If a user is removed from an account, the
+\textsf{accountChange} section specifies \accountID \texttt{null} and the other two fields are
+omitted.
+
+Since Zoom servers are allowed to move users between accounts, \textsf{AccountChange} links do not
+have any signatures.
+
+\paragraph{DeviceAdd.} A device addition link specifies the long-term public device keys for the new
+device and a human-readable name:
+
+\begin{Verbatim}
+{
+  "sigchainType": "User",
+  "linkType": "DeviceAdd",
+  ...
+  "deviceID": "ebc0d2...",
+  "deviceName": COMMIT({
+    "name": "Alice's Work Smartphone",
+    "version": 1
+   }),
+  "deviceType": "PHONE",
+  "deviceEd25519PublicKey": "ce8564...",
+  "deviceX25519PublicKey": "ad7913...",
+
+  "userEmailX25519PublicKey": "f40b66...",
+  "userVoicemailX25519PublicKey": "d600fc...",
+  "userX25519PublicKey": "c2cce1...",
+
+  "revokeDeviceIDs": [
+     "ac98ad...",
+     ...
+  ]
+}
+\end{Verbatim}
+
+This link specifies a device identifier (unique among the devices associated with this user), a
+signing public key, an encryption public key, as well as a device name and type. Note that the
+device name is hidden by a commitment, because users other than the owner of the chain do not need
+to see it. In order to support reusing names, the device name includes an incrementing version
+component, which will be visible in the user interface. Device names allow the user to have a
+human-readable, unambiguous way to distinguish their devices.
+
+The link also specifies the new per-user key public keys. The encryptions of the new PUK seeds for
+older devices are not represented within the sigchain link, but are sent separately to the server,
+which propagates them to the older devices.
+
+After the user adds a new device, they can immediately use it to revoke any existing undesired
+devices, which justifies our claim that later devices should trust the validity of earlier
+(unrevoked) ones.
+
+To ensure that users know the corresponding device private key, each $\deviceadd{}$ link requires a
+signature by \textsf{deviceEd25519PublicKey}.
+
+\paragraph{UserRoot.} This link should always be the first link in a user's sigchain, and can only
+appear as such. It is equivalent to a DeviceAdd and specifies all the same kinds of information
+about the user's first device, but can also include \textsf{emailChange} and \textsf{accountChange}
+fields, which convey similar information as the corresponding sigchain links. Including these fields
+here allows us to reduce the overall number of sigchain links.
+
+\paragraph{DeviceRename.} Users can change their device names if desired. This change is signed with
+the device's public key.
+
+\paragraph{DeviceRevoke.} When a device is stolen, lost, or no longer used for Zoom, the user should
+revoke it. If one of the user's valid devices performs the revocation, it will also rotate the PUKs
+and sign this link to guarantee integrity of the new key. If instead the revocation is done through
+the Zoom website, the PUK cannot be rotated and no signature is made. After a device signing key is
+revoked, it can no longer be used to sign sigchain links.
+
+\paragraph{DeviceKeyRotate.} If a user suspects their device was temporarily compromised, or if they
+have institutional key rotation policies, they might want to rotate their device keys and PUKs. This
+operation keeps the same \deviceid but chooses new signing and encryption keys, as well as a new set
+of PUKs, and uploads encryptions of each PUK secret known to the device for the new encryption key
+so that the old encryption key can be safely discarded. This link is signed by the device's previous
+public key in addition to the new key. As with $\devicerevoke{}$ links, the old signing device key
+cannot sign further sigchain links.
+
+\paragraph{BatchApprove.} A $\batchapprove{}$ link lets a device indicate that it trusts the
+validity of all devices created after that device until the point in the sigchain where the
+$\batchapprove{}$ link appears. To reduce the number of sigchain links, the user can also specify a
+list of devices to revoke within this link. The link can specify a new set of PUKs, and this is
+required if any devices are being revoked. This link is signed by the approving device, and can be
+used to construct a trust graph as described in Section~\ref{subsec:multidev}.
+
+\paragraph{DeviceAddAndApprove.} This link is equivalent to a fused $\deviceadd{}$ and
+$\batchapprove{}$, but allows us to reduce the overall number of sigchain links and also guarantee
+that intermediate states of some operations can't appear on the sigchain. It is posted by an
+existing device, the approver, but also specifies a device identifier, name, and keys for a new
+device. Uniqueness of the new device's identifier, name, and keys are enforced just like in
+$\deviceadd{}$. This link implies that the approver trusts all devices created up to and including
+the device being added by this link. Signatures from both the approver and the new device are
+required.
+
+\paragraph{PerUserKeyRotate.} If a device notices that a device revocation (either a self
+revocation, or one from the website) has occurred after the most recent PUK was generated, the device
+will perform another PUK rotation using a $\peruserkeyrotate{}$ link. This guarantees that even if
+the revoked device was compromised, this newest PUK is still confidential. For personal storage,
+staleness is not an issue, as any device trying to encrypt data will first rotate the per-user keys.
+But if other users are encrypting data for a compromised PUK and the server cooperates, data could
+be readable by a revoked device. This link is signed by the device that is rotating the PUK.
+
+\subsubsection{Email Sigchains}
+
+Users can change their email over time. It is important that at any specific point in time, each
+email corresponds to a unique user, so that Zoom users can be unequivocally identified. Also, users
+should be able to audit whether at any point their email has been associated with another user. We
+record the mapping between an email and the corresponding {\userID}s in an email sigchain. These
+sigchains only have one kind of link, \textsf{UserIDChange}.
+
+\begin{Verbatim}
+{
+  "sigchainType": "Email",
+  "linkType": "UserIDChange",
+  ...
+  "email": COMMIT("alice@example.com"),
+
+  "userIDChange": COMMIT({
+    "userID": "ebc03d...",
+    "userChainSequenceNumber": 9
+   })
+}
+\end{Verbatim}
+
+The \textsf{userChainSequenceNumber} refers to the position in the user sigchain of the
+corresponding \textsf{EmailChange} link (or the initial \textsf{UserRoot} link).
+
+Since users can change their email on the Zoom website, this link does not require any signatures.
+
+\subsubsection{Account Sigchains}
+
+Account sigchains consists of two kinds of links, which record the identity provider and ADN that
+each account is using. \textsf{IDPUpdate} links contain the domain name of the \idp (say
+\texttt{examplecorp.generic-idp.com}). {\idp}s should not use the same domain for multiple accounts
+to prevent equivocation of their attestations.
+
+\begin{Verbatim}
+{
+  "sigchainType": "Account",
+  "linkType": "IDPUpdate",
+  ...
+  "accountID": "abef02...",
+
+  "idpDomain": "examplecorp.generic-idp.com"
+}
+\end{Verbatim}
+
+\textsf{ADNChange} links associate an ADN with the account. Only the latest \textsf{ADNChange} link
+is considered valid, and each one corresponds to an \textsf{AccountIDChange} link in the appropriate
+ADN sigchain. If an account is no longer using an ADN, the \textsf{adnChange} section specifies ADN
+\texttt{null} and the other field is omitted.
+
+\begin{Verbatim}
+{
+  "sigchainType": "Account",
+  "linkType": "ADNChange",
+  ...
+  "accountID": "abef02...",
+
+  "adnChange": COMMIT({
+    "adn": "example.org",
+    "adnChainSequenceNumber": 9
+  })
+}
+\end{Verbatim}
+
+Links in account sigchains do not require any signatures.
+
+\subsubsection{ADN Sigchains}
+
+ADN sigchains track which \accountID a specific Account Domain Name is associated with. There is
+only one type of link, \textsf{AccountIDChange}, which corresponds to and points to an
+\textsf{ADNChange} link in the account sigchain for the appropriate \accountID:
+
+\begin{Verbatim}
+{
+  "sigchainType": "ADN",
+  "linkType": "AccountIDChange",
+  ...
+  "adn": "example.org",
+
+  "accountIDChange": COMMIT({
+    "accountID": "873c34...",
+    "accountChainSequenceNumber": 29
+  })
+}
+\end{Verbatim}
+
+Links in ADN sigchains do not require any signatures.
+
+\subsubsection{Membership Sigchains}
+
+Membership sigchains record changes to the set of users which are part of each account. They have a
+single type of link, \textsf{ChangeMembers}:
+
+\begin{Verbatim}
+{
+  "sigchainType": "Membership",
+  "linkType": "ChangeMembers",
+  ...
+  "accountID": "19aebb...",
+
+  "added": [
+    COMMIT({
+      "userID": "db2f1c...",
+      "userChainSequenceNumber": 9,
+    }),
+    ...
+  ],
+  "removed": [
+    COMMIT({
+      "userID": "9ae3d2...",
+      "userChainSequenceNumber": 4
+    }),
+    ...
+  ]
+}
+\end{Verbatim}
+
+Each link can add or remove multiple users. Each user is hidden behind a commitment so that it is
+possible to prove that an individual user is part of an account without also leaking the {\userID}s
+of the other members that are being added as part of the same link. Hiding the {\userID}s of the
+users being removed from the account would potentially make it harder to prove that a user is indeed
+still a member of a specific account without opening all the commitments. We will solve this problem
+in the future by leveraging the transparency layer, but until then, clients will not rely on these
+sigchains, although the server will start keeping track of them.
+
+Links in membership sigchains do not require any signatures.
+
+\subsection{Sigchain Fingerprints}
+\label{subsec:fingerprints}
+A sigchain fingerprint summarizes a user's sigchains. It is constructed as a hash of the user's user
+sigchain and account sigchain tails (note that this includes the user's present and past email
+addresses, as well as the current ADN due to the reference in the account sigchain). Sigchain
+fingerprints are useful in two contexts: to verify new devices before approving, and to verify the
+keys used to communicate with other users.
+
+During the device addition and approval process, a malicious insider has the opportunity to conduct
+a MitM attack. After the new device is added, the insider creates a copy of the
+user's sigchain but replaces the keys in the final $\deviceadd{}$ link with keys controlled by the
+attacker, using the same device name. The forged copy is served to older devices while the honest
+sigchain is served to the new device. When the older device sees the approval interface, only the
+device name is shown, and so the user may be tricked into accepting the server's device
+unintentionally (which would imply sharing all previously encrypted data with the attacker).
+However, in this case the two devices would necessarily display different fingerprints (as they bind
+to sigchains containing different keys, and the hash is collision resistant). Users concerned about
+MitM attacks can check, before approving new devices, that the fingerprint shown on
+the approving device matches the one from the device(s) they intend to approve. This ensures that an
+attacker cannot interfere with the process and gain access to historical encrypted data.
+
+Sigchain fingerprints are also useful when communicating with other users. For example, when a user
+emails another user for the first time, a malicious server could potentially swap out the intended
+user's sigchain for an entirely fabricated sigchain with devices controlled by the server. In these
+contexts, the user interface will allow users to verify the other user's sigchain fingerprint before
+sending the encrypted message. This process requires the two users to securely communicate
+out-of-band (for example, in-person). The sender can check that the fingerprint they see in their
+client matches the recipient's fingerprint to ensure the message can be decrypted only by the
+intended recipient. Similarly, the recipient can do the same for the sender to verify that the
+message came from the expected sender and was not altered.
+
+In the user interface, fingerprints are represented in hexadecimal. Users can always view their own
+fingerprint from the Zoom client, and Zoom products will show the fingerprints of other users in
+specific scenarios where it is useful.
+
+\subsection{Backup Keys}
+\label{subsec:backupkeys}
+
+A backup key acts as a ``virtual device'' that can be added to a user's sigchain. Instead of
+corresponding to an actual device, it is simply represented as a string of letters and digits, such
+as
+\[ \texttt{ZR30 4D11 5HJM RJG2 6H75 78DH B0VS 4KSF}. \] The first four characters are used as a key
+identifier and are not considered private. Backup keys have at least 128 bits of private entropy, as
+well as built-in error correction to tolerate small copy-pasting mistakes.
+
+From a trusted device's Zoom client, a user can generate a backup key and add it as a new ``device''
+to the user's sigchain with a $\deviceaddandapprove{}$ link. The backup key string is used to derive
+a seed using sodium{}'s~\cite{libsodium} \texttt{argon2id}, which is then used to derive the
+device's signing and encryption keys. Like normal devices, backup keys can be revoked.
+
+
+\subsubsection{Account Recovery}
+
+In the case that a user loses all their devices, they can log onto another device and enter their
+backup key to write a $\batchapprove{}$ link to the user's sigchain that originates from the backup
+key. This gives the new device access to all the old PUKs that the backup key had access to.
+
+\subsubsection{Using Backup Keys for Escrow}\label{subsec:backupkeyescrow}
+
+\textbf{Note:} Escrow using backup keys is not currently available. Users can still
+manually generate backup keys and send them to their IT administrator out of band.
+
+Organizations using Zoom may wish to have access to E2E communications involving their members, to
+protect against data loss or to support legal retention and discovery. We refer to solutions that
+give such organizations cryptographic access as \textit{escrow}.  While we are building a more
+usable and robust escrow solution, backup keys can initially provide the minimal necessary
+functionality: users can generate backup keys and send them to their IT department for safekeeping.
+When escrow is enabled for an account, users in that account are notified before they are allowed to
+continue use of Zoom products. Each user receives notice that their data is being escrowed the
+first time they access their Zoom Mail Service email on one of their devices. The user should verify
+the escrow administrator's sigchain fingerprint before continuing, after which the user's client
+automatically sends an end-to-end encrypted email with a backup key to their account administrator.

@@ -1,6 +1,27 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [v4.0] - 2022-11-18
+### Added
+- Descriptions of new features in user identity and key management:
+  - New user sigchain links, Root and AddAndApprove
+  - Backup keys and application to escrow
+  - Sigchain fingerprints
+  - Application-specific subkeys of per-user keys
+- New Zoom product, Zoom Mail Service
+- New Zoom Phone feature, Advanced Encryption for Voicemail
+- Description of Cake-AES, encryption algorithm used for Zoom Mail and Voicemail
+
+### Changed
+- Title updated to "Zoom Cryptography Whitepaper"
+- Restructured the paper to have individual sections on the background and threat model, User
+  Identity and Key Management, the Zoom Transparency Tree, and Identity Provider Attestations (all
+  of which can apply to multiple products), plus individual sections for each product
+- Consolidated "Real-Time Security" section into User Identity and renamed it to "Compromise
+  Prevention for Device Provisioning"
+- Moved away from a roadmap based on "Phases" to explicitly labeling whether each feature has been
+  released
+
 ## [v3.3] - 2022-07-18
 ### Added
 - Description of E2EE Breakout Rooms in Phase I, available since 5.11.3
@@ -17,7 +38,8 @@ All notable changes to this project will be documented in this file.
 ### Added
 - New section on Zoom Phone in Phase I
 - Describe the Lock The Meeting feature, available since 5.6.
-- Clarify that participants need to agree on who the leader is when checking the meeting leader security code.
+- Clarify that participants need to agree on who the leader is when checking the meeting leader
+  security code.
 - An additional author: Brian Chen
 
 ## [v3] - 2020-12-15
@@ -30,7 +52,8 @@ All notable changes to this project will be documented in this file.
 - Clarify that meeting key seed boxes include mkSeqNum in addition to the key seed
 - Provide more context for the choice of our authenticated encryption algorithms
 - Clarify that we are considering to reintroduce a secure version of the Cloud Recording feature
-- Clarify that in Phase 1 display names should not be relied upon to establish a meeting participant's identity
+- Clarify that in Phase 1 display names should not be relied upon to establish a meeting
+  participant's identity
 - Clarify the security guarantees of the feature described in the Local Key Security section
 ### Removed
 - Multiple ZTTs in Phase III. We will use a single one (per cloud infrastructure) instead.
@@ -72,7 +95,8 @@ All notable changes to this project will be documented in this file.
 - Fix typos.
 
 ### Removed
-- "Doubling-up" of public key operations. We'll use standard [`libsodium`](https://github.com/jedisct1/libsodium) constructions instead.
+- "Doubling-up" of public key operations. We'll use standard
+  [`libsodium`](https://github.com/jedisct1/libsodium) constructions instead.
 
 ## [v1] - 2020-05-22
 ### Added

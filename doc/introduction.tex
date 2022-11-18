@@ -1,0 +1,42 @@
+\section{Introduction}
+Millions of people use Zoom to learn, connect with friends and family, collaborate with colleagues,
+and deliver vital services. Zoom users deserve excellent security, and Zoom is working to provide
+these protections in a transparent and peer-reviewed process. This document describes the
+cryptographic protocols powering several Zoom products and features, both upcoming and already
+released.
+
+We are actively engaging in a process of consultation with multiple stakeholders, including clients,
+cryptography experts, and civil society. As we receive feedback, we will update this document to
+reflect changes in roadmap and cryptographic design.
+
+\subsection{Outline}
+
+In Section~\ref{sec:background_and_goals}, we start by providing some context on the Zoom platform
+and discussing the goals and limitations of our approach.
+
+Many of our most secure offerings, including end-to-end encryption (E2EE), require Zoom client
+devices to have cryptographic keys whose secret components are not available to Zoom servers.
+Section~\ref{sec:identitykeymanagement} describes these keys, how they are managed by Zoom clients,
+and how we use \textit{sigchains} to bind keys from a user's devices to that user's account and
+identifiers.
+
+In Section~\ref{sec:ztt}, we propose a key transparency architecture that will force Zoom servers to
+be consistent about each user's identity, empowering Zoom client devices to monitor their own
+identities and detect any attempts at impersonation. In Section~\ref{sec:idpattestations}, we
+describe how users can leverage external identity providers to certify their own keys, allowing
+communication partners to independently verify them without relying on Zoom. Both of these
+mechanisms reduce the need for fingerprints and security codes to achieve authentication.
+
+The following sections introduce the cryptographic protocols powering Zoom Mail Service
+(Section~\ref{sec:email}), Meetings (Section~\ref{sec:meetings}) and Phone
+(Section~\ref{sec:phone}).
+
+\subsubsection{E2E Encryption for Zoom Meetings}
+Before version\footnote{Previous versions available at
+\url{https://github.com/zoom/zoom-e2e-whitepaper/}} 4.0, this document was titled ``E2E Encryption
+for Zoom Meetings,'' as it focused primarily on the Meetings product, for which it proposed an
+incrementally deployable four-phase roadmap to strong end-to-end security and identity. Since then,
+we have deployed the first phase of the roadmap and expanded the use of end-to-end encryption and
+other advanced cryptography to more Zoom products, such as Phone and Email. To better describe these
+new developments, we moved away from a chronological presentation in favor of an evergreen document
+that describes the cryptographic design behind each product.

@@ -1,0 +1,82 @@
+\section{Cake-AES}\label{sec:cake}
+
+Cake-AES is a general-purpose symmetric encryption mode built on top of 256-bit AES-GCM and SHA-512
+with the following features:
+
+\begin{itemize}
+\item Support for incremental encryption of long messages (theoretically, up to $2^{109}$ bytes)
+\item Support for incremental, authenticated, random-access decryption of long messages
+\item A single long-lived key can encrypt a very high number of ciphertexts, by using large 24-byte
+nonces
+\item Nonces are internally generated, reducing the likelihood of nonce misuse
+\item Ciphertexts commit to both the key and (indirectly) the message
+\end{itemize}
+
+By contrast, AES-GCM and ChaCha20-Poly1305 both use 12-byte nonces, and have a message size limit of
+64 GiB and 256 GiB respectively. While both support random-access decryption, the full message must
+be decrypted to be authenticated.
+
+Cake-AES private keys are 32-byte strings generated uniformly at random. At a high level, Cake-AES
+derives a one-time key by hashing the private key with the nonce, breaks the plaintext into 16 KiB
+chunks, and encrypts each chunk with AES-GCM and a position-based nonce.  Below, we describe in more
+depth how to encrypt and decrypt data using Cake-AES.
+
+\subsection{Encryption}
+
+\begin{itemize}
+\item Generate a random 24-byte nonce.
+\item Concatenate the caller's 32-byte key and the random nonce and hash them with SHA-512. Use the
+first 32 bytes of the hash as a one-time key, and the second 32 bytes as a key commitment.
+\item Split the message into 16 KiB chunks, with a short final chunk that may be empty.
+\item Encrypt each chunk with AES-GCM using the one-time key. For the AES-GCM nonce, use the
+little-endian encoding of either twice the chunk index (for non-final chunks) or twice the chunk
+index plus one (for the final chunk).
+\item Concatenate the random nonce, the key commitment, and all the encrypted chunks to produce the
+ciphertext.
+\end{itemize}
+
+\subsection{Decryption}
+
+\begin{itemize}
+\item Read the random nonce and the key commitment from the front of the ciphertext.
+\item Hash the caller's 32-byte key and the random nonce with SHA-512. The first 32 bytes of the
+hash are the one-time key. Assert that the second 32 bytes match the key commitment.
+\item Split the remainder of the ciphertext into 16400-byte chunks (16 KiB plus 16 bytes for the GCM
+tag), with a short final chunk.
+\item Decrypt each chunk with AES-GCM using the one-time key and the same chunk nonce schedule as
+above.
+\item Concatenate all the plaintext chunks to form the original message. Or, since each chunk is
+independently authenticated, return chunks of plaintext to the caller as a stream.
+\end{itemize}
+
+\subsection{Random-Access Decryption}
+
+\begin{itemize}
+\item If the one-time key is not yet cached:
+\begin{itemize}
+\item Read the random nonce and the key commitment from the front of the stream, derive the one-time
+key, and verify the key commitment as above.
+\item Cache the one-time key.
+\end{itemize}
+\item If the authentic plaintext length is not yet cached:
+\begin{itemize}
+\item Get the apparent ciphertext length from the underlying stream. For example, with a ciphertext
+saved on disk, this would be the file size. This value may be inauthentic, and we need to
+authenticate it.
+\item Compute the apparent length of the final ciphertext chunk. This is the total length, minus the
+random nonce and commitment lengths (56), modulo 16400. Subtract that length from the total to give
+the apparent start offset of the final ciphertext chunk.
+\item Seek the underlying stream to that start offset.
+\item Read the final ciphertext chunk and decrypt it with AES-GCM using the one-time key and the
+appropriate final chunk nonce.
+\item If decryption succeeds, the ciphertext length is authentic. Compute the authentic plaintext
+length by subtracting the random nonce and commitment lengths, plus 16 bytes times the number of
+chunks (the GCM tags), from the ciphertext length.
+\item Cache the authentic plaintext length.
+\end{itemize}
+\item If the plaintext seek target is beyond the authentic plaintext length, arrange to return EOF
+to the caller for any subsequent reads.
+\item Otherwise, seek the underlying stream to the start of the ciphertext chunk corresponding to
+the caller's plaintext seek target. To account for the seek offset within that chunk, arrange to
+skip the appropriate number of bytes after the next decryption.
+\end{itemize}

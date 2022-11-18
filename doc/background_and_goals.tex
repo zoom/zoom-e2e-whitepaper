@@ -1,0 +1,99 @@
+Zoom offers a comprehensive communications platform consisting of a variety of products, including
+Zoom Team Chat, Zoom Phone, Zoom Mail Service, Zoom Whiteboard, and Zoom Meetings.
+
+For users of these products, Zoom provides software for desktop and mobile operating systems and
+embeds software in Zoom Room devices. In this document, when we refer to ``Zoom clients'' or simply
+``clients,'' we include all these various forms of packaging. Crucially, these are systems to which
+we can deploy cryptographic software. In contrast, some Zoom products can also be accessed through
+other systems which are unable to support custom cryptographic protocols, or cannot offer the same
+level of security when doing so. For example, users can join a meeting by dialing in from a landline
+phone (with no cryptography support), or from their web browsers (which can perform cryptography,
+but make it easy for the server to surreptitiously provide tampered cryptographic code).
+
+Our goal is to provide the best security protections across all of these devices, mindful of the
+constraints that each environment poses, and without compromising the easy and seamless experience
+that our customers expect. When analyzing the security of our products, we consider a wide range of
+potential adversaries, namely:
+
+\begin{description}
+	\item {\bf Outsiders:} Individuals who are not authorized to access specific information or data
+	streams (such as everyone who is not mentioned as a sender or recipient in a given email thread,
+	or everyone except the participants of a specific meeting), and do not have access to non-public
+	information related to it (e.g., user passwords, meeting passwords, IDs, SSO systems). These
+	attackers may monitor, intercept, and modify network traffic, but do not have privileged access
+	to Zoom's infrastructure.
+	\item {\bf Participants:} Zoom users who are authorized to participate in a specific
+	communication or have been granted access to some information: for example, meeting participants
+	who can access a meeting, because they know the meeting's ID and password or exercise other
+	qualifying credentials.
+	\item {\bf Insiders:} Those who develop and maintain Zoom's server infrastructure and its cloud
+	providers, as well as attackers who have gained (even partial) access to this infrastructure.
+\end{description}
+
+Against these adversaries, colluding or working independently, we seek the following security goals:
+
+\begin{description}
+	\item {\bf Confidentiality:} Only authorized participants should have access to the contents of
+	end-to-end encrypted communications. If the Zoom product supports removing users from encrypted
+	communication channels, then those users should no longer have access to those communications
+	after they are removed.
+	\item {\bf Integrity:} Those who are not authorized participants should have no ability to
+	corrupt those end-to-end encrypted communications.
+	\item {\bf Abuse Prevention:} When authorized participants engage in abusive behavior, there is
+	an effective mechanism to report them to Zoom's safety team, to help prevent further abuse.
+\end{description}
+
+Broadly speaking, end-to-end encrypted products aim to achieve confidentiality and integrity goals
+even against insiders: we aim to detect, and if possible, prevent any violations of these
+properties. While prevention is preferable, we stress that even detection can be a powerful
+deterrent: it allows users to monitor their communications and quickly move to limit any damage,
+while demonstrating our commitment to be transparent about breaches.
+
+All Zoom products also have many server-driven security and access control mechanisms, including
+transport-layer encryption, meeting passwords, and granular user and account level permissions.
+While these are not meant to protect against insiders with privileged access to our infrastructure
+(and are not the focus of this document), they are highly effective against outsiders.
+
+\subsection{Limitations}
+\label{subsec:overall-limit}
+
+Our encryption protocols offer strong guarantees for our customers. However, as with any security
+system, there are limitations to our approach. There are certain classes of attacks and threats that
+we deem out of scope, including:
+
+\begin{description}
+	\item {\bf Metadata and traffic analysis:} Insiders and outsiders may learn information about
+		the timing, duration, and bandwidth usage patterns of end-to-end encrypted communications,
+		as well as the list of participants and IP addresses.
+	\item {\bf Software flaws:} Zoom's client code or the third-party libraries it links against can
+		have bugs, or worse, intentional backdoors. Zoom's binary build procedures might become
+		compromised. In these cases, there are no good cryptographic guarantees we can make. Zoom
+		relies on extensive analyses by independent third party auditors to reassure customers in
+		this domain.
+	\item {\bf Third party compromise:} We leverage third-party Single Sign-Ons (SSOs) and Identity
+		Providers ($\idp$s) to independently vouch for the identity of Zoom's users. Doing so moves
+		the trust away from Zoom and to identity providers that many of Zoom's enterprise users
+		already trust for sensitive identity operations. Where we do rely on SSOs and $\idp$s, the
+		additional security guarantees they offer might be lost due to attacks on their
+		infrastructure.
+	\item {\bf Denial of service:} The encryption architecture does not offer any guarantees about
+		availability of the service. Insiders can always refuse service to a specific user,
+		including when they try to perform security critical operations such as revoking a
+		compromised key to prevent further data from being encrypted and thus exposed.
+\end{description}
+
+In addition, we note that many Zoom products have rich feature sets and work on multiple platforms.
+Some of these features and use cases are incompatible with our security guarantees. For example,
+Zoom Mail Service can be used to send and receive emails from other email services that do not
+support end-to-end encryption (see Section~\ref{sec:mailext}). Or, dial-in phones can be used to
+join Zoom Meetings, but do not support end-to-end encryption. E2E security of the type described in
+this document is not possible in settings where Zoom products interface with these existing
+standards. Moreover, users can access some Zoom products through their web browser, and without
+installing Zoom's client. Supporting E2EE for web users poses certain challenges: secure, long-term
+storage for cryptographic private keys might be unavailable; and worse, malicious web servers could
+serve backdoored source code to web clients with little chance of detection. We intend to
+participate in the web standards development process to facilitate the creation of browsers upon
+which we could offer dependable E2E security.
+
+We will further comment on the specific properties and limitations for each of the products and
+features described in this whitepaper in their respective sections.

@@ -30,7 +30,7 @@
 \fancyhf{}
 \rhead{\footnotesize CC BY-SA 4.0}
 \lhead{\footnotesize\raisebox{1.25pt}{\fontsize{7}{7}\textcopyright}\hspace{2pt}Zoom Video Communications, Inc.}
-\lfoot{\footnotesize E2E Encryption for Zoom Meetings}
+\lfoot{\footnotesize Zoom Cryptography Whitepaper}
 \rfoot{\footnotesize Page \thepage}
 
 %tilepage has no footer
@@ -38,6 +38,8 @@
 \fancyhf{}
 \rhead{\footnotesize CC BY-SA 4.0}
 \lhead{\footnotesize\raisebox{1.25pt}{\fontsize{7}{7}\textcopyright}\hspace{2pt}Zoom Video Communications, Inc.}
+\lfoot{$^*$Zoom is grateful for the collaboration and expertise of our co-authors, who appear here if they
+contributed to any version of this whitepaper.}
 }
 
 \include{macros}
@@ -54,7 +56,7 @@
 \titlespacing*{\subsection}{0pt}{3ex}{1ex}
 \titlespacing*{\subsubsection}{0pt}{1ex}{0ex}
 
-\title{E2E Encryption for Zoom Meetings}
+\title{Zoom Cryptography Whitepaper$^*$}
 
 \author[1]{\small Josh~Blum}
 \author[1]{\small Simon~Booth}
@@ -79,7 +81,7 @@
 \affil[2]{\footnotesize Johns~Hopkins~University}
 \affil[3]{\footnotesize Stanford~University}
 
-\date{July 18, 2022 \\ \small Version 3.3}
+\date{November 18, 2022 \\ \small Version 4.0}
 
 \begin{document}
     % Hack to get the title centered in its own page.
@@ -98,18 +100,30 @@
     \newpage
     \renewcommand{\thesection}{\arabic{section}}
     \renewcommand{\thesubsection}{\thesection.\arabic{subsection}}
-    \input{1_introduction}
-    \input{2_roadmap}
-    \input{p1_1}
-    \input{p1_2}
-    \input{p2}
-    \input{p3}
-    \input{p4}
-    \input{7_conclusion}
+    \input{introduction}
+
+    \section{Background and Security Goals}\label{sec:background_and_goals}
+    \input{background_and_goals}
+    \section{User Identity and Key Management}
+    \input{identity_and_key_management}
+    \section{Transparency Tree}\label{sec:ztt}
+    \input{ztt}
+    \section{Identity Provider Attestations}\label{sec:idpattestations}
+    \input{idp}
+
+    \section{Encryption for Zoom Mail Service}\label{sec:email}
+    \input{email}
+    \section{Encryption for Zoom Meetings}\label{sec:meetings}
+    \input{meetings}
+    \section{Encryption for Zoom Phone}\label{sec:phone}
+    \input{phone}
+    %
+    \input{acknowledgements}
     \pagebreak
     \input{references}
     \newpage
     \appendix
-    \input{a_releases}
-    \input{b_devices}
+    \input{releases}
+    \input{devices_formal}
+    \input{cake_aes}
 \end{document}

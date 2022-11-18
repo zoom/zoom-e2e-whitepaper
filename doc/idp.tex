@@ -1,0 +1,174 @@
+\textbf{Note:} Identity Provider Attestations are not currently available, and planned for a future
+update.
+
+Accounts that have an ADN and an identity provider\footnote{Compatible identity providers will need
+to support a custom extension of the OpenID Connect (OIDC) protocol which we describe below.} (\idp)
+will be able to have the \idp vouch for the identity of their users in a way that other Zoom users
+can independently verify. This mechanism restricts the ability, even for Zoom insiders, to
+impersonate account members. Many organizations already trust an \idp for authentication purposes,
+so this feature does not increase the attack surface or require additional trust in the \idp.
+
+In order for clients to be able to verify identity attestations by an external \idp, we need two
+components:
+
+\begin{enumerate}
+\item A way for clients to determine the \idp associated with a Zoom account (that cannot be
+    tampered with by the Zoom servers)
+\item A mechanism for {\idp}s to issue---and for clients to verify---a signed attestation that binds
+    a user's email address to their set of devices and keys
+\end{enumerate}
+
+\subsection{Associating Accounts with Identity Providers}
+\label{subsec:adnToIdp}
+In order to associate an account to its \idp, we will rely on TLS\@. Accounts with ADNs will host a
+JSON object at the root of the subdomain \texttt{idp-config.well-known.} of the ADN, e.g.,
+\texttt{https://idp-config.well-known.example.org}.
+
+The JSON object contains a field with key \texttt{us.zoom.idp.<CLOUD\_NAME>} whose value points to
+the unique domain that the \idp has reserved for this account. For example, if \texttt{example.org}
+is using \texttt{generic-idp.com} as their identity provider and has an account hosted on the Zoom
+commercial cloud, the object might look like:
+
+\begin{Verbatim}
+{
+    "us.zoom.idp.commercial": "examplecorp.generic-idp.com"
+}
+\end{Verbatim}
+
+Specifying the cloud in the field name allows to support ADNs configuring different IDPs for
+different clouds. Note that since accounts are expected to change their \idp rarely, clients can
+cache this mapping aggressively.
+
+If the endpoint does not return a valid response, clients will assume there is no \idp and not
+display any identifiers for this user. Because Zoom will proxy client connections to ADNs to avoid
+leaking the IP addresses of Zoom clients to external parties, a malicious Zoom server (or network
+attackers) can convince clients that a certain account is not using an \idp by e.g., returning a
+timeout error or a DNS NXDOMAIN message. We believe that this is the right tradeoff for the
+following reasons:
+
+\begin{enumerate}
+\item Configuring the \idp via subdomains offers flexibility for the account admins. For example,
+    the account admin can delegate the \texttt{idp-config.well-known} subdomain to the \idp, which
+    can obtain a TLS certificate for the subdomain and host the required JSON file. The only
+    technical action required by the account admin would be adding a DNS record for the subdomain.
+\item Once deployed, our transparency layer (Section~\ref{sec:ztt}) will ensure that if the server
+    tampers with an account's ADN or \idp, the misbehavior will be detected through auditing of the
+    account and ADN sigchains.
+\end{enumerate}
+
+\subsection{IDP Attestations}
+
+\idp attestations will be generated and verified according to the OpenID Connect (OIDC) protocol.
+OIDC is an extension of the widely used OAuth 2.0 authentication protocol, an industry standard that
+many {\idp}s and Single Sign-On providers already support. OIDC provides a standardized format, the
+ID token, to express claims about identities and their attributes. It also specifies how users can
+request attestations for their own identity and verify ones obtained from other users.
+
+We will customize the protocol by
+
+\begin{enumerate}
+\item Introducing an additional attribute \texttt{"zoom-identity-snapshot"} to the ID token in order
+    to encode the state of a user's identity on Zoom. {\idp}s will keep track of the latest value of
+    this attribute for every account user.
+\item Specifying how this attribute can only be updated by the authorized user, and not by any other
+    user or entity, including Zoom servers.
+\item Specifying how ID tokens about a specific user identity can be validated by other users.
+\end{enumerate}
+
+Our modified OIDC ID token (which will also be referred to as an \idp attestation) is a signed JSON
+Web Token (JWT) data structure which contains claims about a user's Zoom identity. The payload might
+look like the following:
+
+\begin{Verbatim}
+{
+  "iss": "https://examplecorp.generic-idp.com", // issuer
+
+  "name": "Alice Henderson", // optional
+  "email": "alice@example.com", // optional
+
+  "zoom-identity-snapshot": "409788…",
+
+  "exp": 1311281970 // expiration time
+  "iat": 1311280970, // issue time
+
+  [...]
+}
+\end{Verbatim}
+
+The token contains an issuer field which identifies the OIDC issuer of the token (the \idp). In
+order for Zoom clients to accept an identity claim, the issuer field must match the domain that
+associates the \idp with the account (in our example, as returned by
+\texttt{https://example.org/.well-known/idp-config}). \texttt{name} and \texttt{email} are marked as
+optional to allow users to certify that they are part of a specific account without disclosing
+exactly which member they are. \texttt{iat} and \texttt{exp} define the validity of the token.
+
+The \texttt{zoom-identity-snapshot} field encodes the state of a user's identity. As explained in
+Section~\ref{subsec:sigchains}, clients keep track of these states using sigchains. An identity
+snapshot will encode the user sigchain tail (which itself commits to the \userID); however, the
+identity provider can treat this attribute as an opaque string and does not need to check its
+validity.
+
+\subsection{Updating Snapshots}
+Users who successfully sign into Zoom using OAuth 2.0 receive an access token from the \idp which
+can be used to access protected resources. This access token will also be used to read and update
+their own \texttt{zoom-identity-snapshot} attribute. To ensure that only an authorized user on a
+Zoom native client is able to update the identity snapshot stored by the \idp, the Identity Snapshot
+protocol requires {\idp}s to:
+
+\begin{enumerate}
+\item Introduce a new OAuth scope \texttt{update-zoom-identity} which is required to update the
+    snapshot.
+\item Only issue access tokens with the \texttt{update-zoom-identity} scope for requests that use
+    PKCE and have set the redirect URI to a fixed custom URI intended to refer to the native Zoom
+    desktop and mobile applications: \texttt{us.zoom://idp\_auth}.
+\end{enumerate}
+
+With the custom URI redirect, we trust the operating system and browser to redirect to the native
+Zoom app and not to a website in a browser: such a website might be serving malicious JavaScript
+from a compromised web server that could hijack the authorization flow. PKCE is an OAuth 2.0
+extension that prevents other apps installed on the user's device from intercepting the
+authorization code. The Zoom app will not share the resulting ``write" access token with anyone
+else, including the Zoom server, but read-only access to snapshots can be extended to all access
+tokens, including those issued to browser sessions.
+
+We realize that the protections given to write ID tokens depend on the security of the underlying
+platform including the user's browser, their OS and their hardware, but we intend these protections
+to be best effort measures.
+
+Whenever devices make updates to their user sigchain, they submit the latest sigchain tail to their
+\idp. In the event where a device successfully makes a sigchain update with the Zoom server but
+fails to update the \idp, the next device that comes online will notice the new sigchain links and
+update the \idp itself, but only after the user has reviewed the new links for potentially malicious
+device additions.
+
+\subsection{Validating IDP Attestations}
+
+\idp attestations can be validated like standard OIDC ID tokens in the Authorization Code
+Flow~\cite{oidc} with a few modifications. Users will:
+
+\begin{enumerate}
+\item Verify that the \idp in the \texttt{iss} field of the JWT matches the JSON hosted at the ADN's
+    \texttt{idp-config.well-known.} subdomain. This ensures that the IDP is authorized to sign on
+    behalf of the account ADN (as specified in Section~\ref{subsec:adnToIdp}).
+\item Use OpenID Connect Discovery (e.g., make a request to \\
+    \texttt{https://examplecorp.generic-idp.com/.well-known/openid-configuration}) \\ to ensure that
+    the key used to sign the JWT is valid.
+\item Validate the JWT, including checking its signature and expiration date.
+\item Validate that the email and snapshot match the user sigchain provided by the Zoom server. When
+    used in E2EE meetings, users will accept attestations that do not cover the latest sigchain tail
+    as long as the new links since the {\idp}'s snapshot do not revoke the device currently being
+    used in the meeting. If the new links change the user's email or account, then the user will be
+    shown without identifiers.
+\end{enumerate}
+
+Note that the fetched attestation may be shared with and validated by anyone, so it doesn't include
+the \texttt{aud} field.
+
+\subsection{Security Properties}
+
+Users in accounts with an \idp that supports our protocol receive particularly strong security
+guarantees. Because clients rely on the account's ADN (and not the Zoom server) to determine the
+\idp, a Zoom insider cannot impersonate these users unless the \idp or TLS itself is compromised.
+The Zoom proxy or network attackers can potentially trick a user into believing that another user's
+account's ADN does not have an associated \idp, but in this case, the user will appear without an
+email address or ADN.

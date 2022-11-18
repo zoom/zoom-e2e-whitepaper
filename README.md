@@ -1,11 +1,16 @@
-# Zoom End-to-End Encryption Whitepaper
-This is the home of the whitepaper documenting Zoom's planned end-to-end encryption system. The latest released PDF will always be [available here](https://github.com/zoom/zoom-e2e-whitepaper/blob/master/zoom_e2e.pdf). This repository will be updated as we implement and iterate our cryptographic design.
+# Zoom Cryptography Whitepaper
+This is the home of the whitepaper documenting the cryptographic design powering several Zoom
+products, including end-to-end encryption for emails, phone and meetings. The latest released PDF will always be [available
+here](https://github.com/zoom/zoom-e2e-whitepaper/blob/master/zoom_e2e.pdf). This repository will be
+updated as we implement and iterate on our cryptographic protocols.
 
-See the [changelog](./CHANGELOG.md) for a summary of what changed in each version. We still value
-feedback, recommendation and corrections. Please continue to post them under
-[Issues](https://github.com/zoom/zoom-e2e-whitepaper/issues).
+See the [changelog](./CHANGELOG.md) for a summary of what changed in each version. Note that, before
+version 4.0, this document was titled "E2E Encryption for Zoom Meetings", but we updated the name to
+reflect its expanded scope. We still value feedback, recommendation and corrections. Please continue
+to post them under [Issues](https://github.com/zoom/zoom-e2e-whitepaper/issues).
 
 ## Timeline
+- **18 November 2022**: [Version 4.0](./archive/zoom_e2e_v4.pdf) was published.
 - **18 July 2022**: [Version 3.3](./archive/zoom_e2e_v3_3.pdf) was published.
 - **29 October 2021**: [Version 3.2](./archive/zoom_e2e_v3_2.pdf) was published.
 - **5 October 2021**: [Version 3.1](./archive/zoom_e2e_v3_1.pdf) was published.

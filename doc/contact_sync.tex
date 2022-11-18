@@ -1,0 +1,65 @@
+\subsection{Highlighting Untrusted Devices with Contact Sync}
+\label{subsec:contactsync}
+
+\textbf{Note:} Contact Sync is not currently available. We plan to release it in a future update.
+The description here is specific to E2EE Meetings (Section~\ref{sec:meetings}), but similar
+guarantees can be extended to other products. 
+
+Even with a strong concept of identity, impersonation attacks are still possible in meetings. If
+Bob's coworker, Alice, has the email \texttt{alice@company.org}, Bob might not realize if he joins a
+meeting with an impersonator using \texttt{al1ce@company.org}, especially if the impersonator has
+their video turned off. Or if a hacker stole Alice's username and password, they could provision a
+new device and pretend to be Alice. We'd like to have a TOFU-style UI feature to let Bob know if
+it's the first time he's seeing a device in a meeting---but we also don't want to bother Bob for his
+first meeting with Alice on every new device that Alice makes, which could lead to alert fatigue.
+Specifically, we want to provide warnings when Bob is in a meeting with a device that is not
+approved by a device that Bob has seen before. We'd also like Bob to share his meeting history
+between his devices securely so they all have the latest information.
+
+Each device maintains, for every other user that it has been in a meeting with, a record containing
+that user's user sigchain tail, the time of their first meeting together, and the total number of
+E2EE meetings they were in together. These records are updated after each meeting as appropriate,
+though they are only updated when either
+\begin{enumerate}
+\item The meeting has less than 25 participants and the device has been in the meeting with the
+participant for over 10 minutes
+\item The participant has been speaking for over 30 seconds
+\end{enumerate}
+
+In order for the meeting history to be shared across devices, clients periodically send encrypted
+meeting records to the server. Records are individually encrypted with the latest PUK, signed with
+the device key, and tagged with $t = \mathsf{HMAC}(k, \userID)$, where $k$ is a key derived from the
+PUK. The server stores a mapping between $(\deviceid, t)$ and the encrypted record, which the
+clients can update as necessary. When the client learns of a new PUK, records and tags are updated
+to use the new PUK lazily.
+
+The records are encrypted to minimize the privacy loss in case they are leaked (Zoom servers already
+learn who is participating in which meeting). Because the tag is generated deterministically, these
+records would reveal if two of Alice's devices had meetings with the same user (but not which user),
+given that both devices used the same per-user key. However, we find this tradeoff acceptable as it
+allows for a more efficient synchronization. Further, the server has the ability to rollback a
+device's record at any time, but doing so could only cause additional warnings.
+
+When joining a meeting, clients generate tags for each other participant using each known PUK and
+request the server to send any corresponding records. Any record signed by a revoked device is not
+considered. Given this data, we can provide warnings for each device in a meeting:
+\begin{enumerate}
+\item If the device has been seen before, or if the device is trusted by a device that has been seen
+    before as indicated by the trust graph, display the number of meetings with this user in the
+    last month.
+\item Otherwise, if the device is untrusted but the user has been seen before, display ``This is the
+    first time you are talking to this device of this person."
+\item Otherwise, display ``This is the first time you are talking to this person."
+\end{enumerate}
+
+Note that devices may not have access to all the per-user keys used to encrypt records, which could
+result in extraneous warnings. For example, imagine Alice provisions Zoom on her phone and has a
+meeting with Bob. Then, Alice provisions Zoom on her laptop and has another meeting with Bob without
+approving the laptop from the phone. In this case, Alice's laptop does not have the PUK used by
+Alice's phone to encrypt the record, so there will be another warning for Bob in the second meeting.
+
+Though Contact Sync warnings improve Zoom users' security, alert fatigue can make the warnings less
+useful. If a user's contacts regularly fail to approve new devices with earlier ones, or if the
+server does not properly sync records of prior communication, users can grow accustomed to the
+warnings and possibly ignore them in the event of a real attack. Even without an attack, excessive
+warnings make for a suboptimal and tiresome user experience.

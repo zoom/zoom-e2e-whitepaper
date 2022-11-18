@@ -1,0 +1,33 @@
+\subsection{Compromise Prevention for Device Provisioning}\label{subsec:realtime} \textbf{Note: }
+The features in this section are not currently available. We plan to release them in future updates.
+
+With the ZTT (see Section~\ref{sec:ztt}), we have a mechanism for users to detect sigchain
+corruptions after-the-fact. For instance, if an insider adds a new device onto Alice's sigchain to
+impersonate her in a meeting while she is offline, Alice will detect the attack after she comes back
+online, since the attacker had to commit the malicious change to Alice's sigchain to the ZTT.
+Ideally, Alice could prevent unauthorized device additions from happening in the first place. Note
+that users whose identities are vouched for by a trusted third-party $\idp$
+(Section~\ref{sec:idpattestations}) already have good protections as long as their $\idp$ is not
+compromised. We want to offer a strong alternative to all users that does not rely on external
+parties.
+
+Recall that users currently login to Zoom via SSO, OAuth, or simple username and password. Their
+devices' keys are authenticated by multiple signatures: a self signature, an optional approval
+signature by an older device (Section~\ref{subsec:multidev}), a signature by Zoom (as part of the
+inclusion in the ZTT, once it is deployed), and an optional attestation from the $\idp$.
+
+Further validations of the device keys are possible. For example, users can sign new devices with
+existing devices at the time they are first added (as opposed to in a later approval), potentially
+through a QR-code-based flow similar to the one Keybase has now. One device shows a QR code of a
+random session key, and the other scans the QR code; this establishes an end-to-end secure tunnel
+between the two devices that a compromised server cannot interfere with. Over this tunnel, devices
+can exchange public keys and cross-sign each other.
+
+Alternatively, organizations can set up policies that require an IT administrator to sign off on
+device additions. The new user device can display the hash of its public key in QR code form. The IT
+administrator can scan it, signing the new device with their administrator's signing key.
+
+Devices without the required signatures might be prevented from signing on behalf of the user or
+rotating the user's PUKs, thus denying them access to any content encrypted for the user. They might
+also trigger extra UI warnings to other participants when joining meetings, or even be excluded from
+meetings marked ``high security.''
