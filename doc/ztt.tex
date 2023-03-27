@@ -32,27 +32,33 @@ becomes virtually invisible to the user.
 
 \subsection{Zoom Transparency Tree}
 
-The idea that there should be a single and consistent mapping between an identity and its public
-keys has already been explored successfully to solve similar issues. Most notably, Certificate
-Transparency~\cite{langley2013certificate} limits the damage that a compromised certificate
-authority can do by signing fake TLS certificates. It does so by requiring that all signed X.509
-certificates must be submitted to a publicly auditable log before being accepted by browsers.
-Industry projects such as Key Transparency~\cite{keytransparency} and Keybase~\cite{keybase} (which
-is now part of Zoom) and academic works such as SEEMless~\cite{chase2019seemless} and
-CONIKS~\cite{melara2015coniks} have explored applying a similar approach to individual users'
-identities for messaging applications, with Keybase being the only instance in production use today,
-as far as we know. However, all the existing solutions in this space that we are aware of do not
-currently match Zoom's security and privacy requirements while offering usability features like
+The idea that there should be a single and consistent mapping between an
+identity and its public keys has already been explored successfully to solve
+similar issues. Most notably, Certificate
+Transparency~\cite{langley2013certificate} limits the damage that a compromised
+certificate authority can do by signing fake TLS certificates. It does so by
+requiring that all signed X.509 certificates must be submitted to a
+publicly auditable log before being accepted by browsers. Industry projects such
+as Key Transparency~\cite{keytransparency} and Keybase~\cite{keybase} (which is
+now part of Zoom), and academic works such as SEEMless~\cite{chase2019seemless}
+and CONIKS~\cite{melara2015coniks} have explored applying a similar approach to
+individual users' identities for messaging applications, with Keybase being the
+only instance in production use today, as far as we know. However, all the
+existing solutions in this space that we are aware of do not currently match
+Zoom's security and privacy requirements while offering usability features like
 multi-device support.
 
-We build on prior work to design a new mechanism tailored to Zoom's use cases: the Zoom Transparency
-Tree (ZTT). The ZTT is backed by a Merkle tree as used by Keybase, but with privacy-preserving
-path-lookup features as in CONIKS. This data structure offers a key-value store interface where
-key-value pairs, once inserted, cannot be removed or altered. The state of the structure can be
-summarized by a small commitment, and lookup queries can be accompanied by a short proof that they
-are consistent with the commitment. Whenever a client is given a signed sigchain statement (as
-introduced in Section~\ref{subsec:sigchains}) about another user's identity or their keys, this
-statement is accompanied by an inclusion proof in the ZTT.
+We build on prior work to design a new mechanism tailored to Zoom's use
+cases: the Zoom Transparency Tree (ZTT). The ZTT is backed by a Rotatable
+Zero-Knowledge Set~\cite{rzks}, which is similar to the Merkle
+tree as used by Keybase, but with privacy-preserving path-lookup features such
+as in CONIKS. This data structure offers a key-value store interface where
+key-value pairs, once inserted, cannot be removed or altered. The state of the
+structure can be summarized by a small commitment, and lookup queries can be
+accompanied by a short proof that they are consistent with the commitment.
+Whenever a client is given a signed sigchain statement (as introduced in
+Section~\ref{subsec:sigchains}) about another user's identity or their keys,
+this statement is accompanied by an inclusion proof in the ZTT.
 
 \subsection{Integration Details}
 

@@ -28,7 +28,7 @@ well as separate white-labeled private Zoom instances, each with their own cloud
 generally support cross-cloud communication, though there may be some limitations.
 
 Zoom users authenticate to Zoom in a variety of ways. Users can log in using their email address and
-a password, or via an OAuth or SAML-based flow with an external Identity Provider (\idp) that has
+a password, or via an OAuth or SAML-based flow with an external Identity Provider (IDP) that has
 been set up for their account. In all of these cases, an email address is used as a unique user
 identifier. If the account settings allow it, users can change their email address or authentication
 method.
@@ -79,8 +79,7 @@ are added, and are able to revoke devices that are lost, stolen, or no longer us
 \subsection{Displaying Identity}
 \label{subsec:displayid}
 
-\textbf{Note:} Displaying cloud identifiers and ADNs is not currently available. We plan to release
-them in future updates.
+\textbf{Note:} Displaying cloud identifiers is not currently available. We plan to release it in future updates.
 
 This section describes how we could display the identity of a Zoom user to others in various
 products. Because cryptographic keys are not easy to read, compare, or keep track of, we only show
@@ -88,10 +87,12 @@ human-readable identifiers in the user interface. A user's set of identifiers co
 components:
 
 \begin{enumerate}
-\item A Cloud Identifier, which represents the cloud infrastructure a user's information is hosted
-    on (omitted if the user is on the Zoom commercial cloud)
-\item An Account Domain Name (ADN), which identifies the account that the user is part of, where
-    applicable
+\item A Cloud Identifier, which represents the cloud infrastructure a user's
+information is hosted on (omitted if the user is on the Zoom commercial cloud)
+\item An Account Domain Name (ADN), which identifies the account that the user
+is part of, where applicable. Before the ZTT (Section~\ref{sec:ztt}) is
+deployed, the ADN will only be displayed for users whose identities are vouched
+for by a trusted third-party IDP (Section~\ref{sec:idpattestations}).
 \item
     An email address, which can be used to distinguish individual users within the account
 \end{enumerate}
@@ -154,23 +155,22 @@ Mike is associated with an email address but not an ADN.
 
 \subsubsection{Identifying Accounts}\label{subsubsec:adn}
 
-\textbf{Note:} ADN support is not currently available. We plan to release it in a future update.
-
 Accounts on Zoom can be optionally identified using a domain name, which we call the Account Domain
 Name (ADN). Domain names make good identifiers because they are unique (while for example two
 companies with the same name might exist in two countries), and many users are already familiar with
-them. We will allow internationalized domain names (IDNs) to be used as ADNs, but to prevent
-homograph attacks, the UI will show the Punycode representation by default and the rendered domain
-name only on mouse hover.
+them.
 
-An account administrator may choose one of the account's existing Associated Domains as the ADN, or
-Zoom can provide a new dedicated subdomain. Associated Domains is an existing Zoom feature where a
-Zoom account can be associated with multiple domain names. To do so, the account administrator has
-to prove ownership of the domain name to Zoom, e.g., by adding a specific DNS record, adding a
-header tag to the home page, or hosting a file at a specific location on the domain.
+To set the ADN, an account administrator may choose one of the account's Associated Domains. 
+Associated Domains is a Zoom feature where an account admin can prove ownership 
+of domain names (e.g. by adding a specific DNS record, adding a header tag 
+to the home page, or hosting a file at a specific location on the domain) for the 
+purposes of account and user management. Domain names consist of
+alphanumeric characters and hyphens. 
 
-Only a single account at a time can use a domain name as their ADN. Account administrators are
-allowed to change their ADN if needed.
+Only a single account at a time can use a domain name as their ADN. Account
+administrators are allowed to change their ADN if needed. In the future, Zoom
+may provide a new dedicated subdomain as an option for accounts to use as the
+ADN.
 
 \subsubsection{Identifying Users}
 

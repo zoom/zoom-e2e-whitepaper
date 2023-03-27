@@ -1,6 +1,13 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [v4.1] - 2023-03-27
+### Added
+- Description of "Okta Authentication for End-to-End Encryption", which supports Okta IDP attestations for E2EE Meetings 
+- Rotatable Zero-Knowledge Set citation in "Zoom Transparency Tree" section
+### Changed
+- Improved E2EE meeting key rotation, leader participant list, and liveness.
+
 ## [v4.0] - 2022-11-18
 ### Added
 - Descriptions of new features in user identity and key management:

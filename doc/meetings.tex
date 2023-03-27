@@ -251,8 +251,9 @@ devices will directly use their signing key pairs as advertised in the user's si
 each device generates a dedicated $\ivk/\isk$ pair using $\zoomsignkeygen$ on their first login. In
 all cases, these signing keys are securely stored as described in Section~\ref{subsec:lks}.
 
-If the user is joining as a guest or is not logged in, this key pair is freshly generated for every
-meeting and never recorded in the sigchain. This prevents other participants from tracing them
+If the user is joining a meeting as a guest (without logging in), this key pair
+is freshly generated for every meeting and never recorded in the sigchain. This
+prevents other participants from tracing them
 across meetings by noticing when a long-term key is reused.
 
 We assume each meeting is identified by its unique $\meetingID$, as in the current system. Each
@@ -346,16 +347,16 @@ indicating that the client's $\userID$, $\hardwareid$, and $\ivk$ are authorized
 $\hardwareid$ are non-cryptographic identifiers used by the Zoom server to distinguish between users
 and devices.
 
-We'll use certificate pinning to strengthen the security of the server signature. Zoom clients will
-ship with a DigiCert root certificate and they will only trust certificates authorized for a
-specific Zoom domain via a certificate chain originating from the DigiCert root. Hardware Security
+We use certificate pinning to strengthen the security of the server signature. Zoom clients will
+ship with a DigiCert root certificate and they only trust certificates authorized for a
+specific Zoom domain via a certificate chain originating from the pinned DigiCert root. Hardware Security
 Modules (HSMs) are used to manage keys for an internal intermediate CA, which will in turn attest to
 the servers' signing keys. Server keys are valid for a week and are rotated daily. In order to
 detect certificate revocation in the event of CA or server compromise, clients require stapled OCSP
 responses on the intermediate certificates they receive.
 
 These signatures help protect against MitMs injecting users into the meeting. This feature was
-released in Version 5.7.0 (see Appendix~\ref{appendix:releases}).
+released in version 5.7.0 (see Appendix~\ref{appendix:releases}).
 
 \subsubsection{Participant Key Generation}
 \label{subsubsec:partikeygen}
@@ -422,9 +423,9 @@ leader:
 \item Defines $\textsf{Context}_\textsf{cipher} \leftarrow
 \texttt{"Zoombase-1-ClientOnly-Sig-EncryptionKeyMeetingSeed"}$.
 \item Computes $\ciphertext \leftarrow \cboxencrypt(\sk_\LL, \pk_i, \textsf{Context}_\textsf{KDF},
-    \textsf{Context}_\textsf{cipher}, \metadata, (\mk, \mkSequenceNumber))$.
+    \textsf{Context}_\textsf{cipher}, \metadata, (\mk, \mkSequenceNumber))$.%
    \label{participantJoinRekeyStart}
-\item Posts $(i, \ciphertext)$ to the ``bulletin board.''
+\item Posts $(i, \ciphertext)$ to the ``bulletin board.''%
    \label{participantJoinRekeyEnd}
 \end{enumerate*}
 \endgroup
@@ -474,21 +475,30 @@ signal on their signaling channel, and perform step \ref{participantJoinRekeyNon
 sent by the leader is greater than the previously known $\mkSequenceNumber$; otherwise the key
 rotation is ignored.
 
-Participants should not immediately encrypt using the new meeting key; they should wait about 2
-seconds, to ensure all participants smoothly transition over. All encrypted UDP packets are prefaced
-with the 4-byte $\mkSequenceNumber$, so participants know which version to use for decryption. 
+Participants do not immediately encrypt using the new meeting key; they wait about 2
+seconds to ensure all participants smoothly transition over. Additionally, as specified in Section~\ref{subsubsec:lpl}, they wait
+for a signature from the leader certifying the list of users the key has been shared with. This ensures that users always know for whom
+they are encrypting. All encrypted UDP packets are prefaced
+with the 4-byte $\mkSequenceNumber$, so participants know which version to use for decryption.
 
-The leader should trigger a rekey whenever a participant enters or leaves the meeting, but not more
-than every 15 seconds (to prevent thrashing). As an important security measure, users joining the
-meeting never get to see keys that are more than 15 seconds old, since otherwise they could view
-encrypted in-meeting chats deep into the meeting's past. Similarly, users who leave a meeting might
-be able to decrypt meeting content sent in the next 15 seconds (or up to a couple of minutes if the
-server is suppressing messages to prevent the leader from rotating the key). But likewise this
-rekeying strategy shouldn't delay a user from joining a meeting.
+The leader should trigger a rekey whenever a participant enters or leaves the meeting. However,
+if multiple users join in short succession, the leader may choose to wait for a short amount of time
+and add all the newly-joined users at once. On
+the other hand, rekeys when users leave meetings might be delayed for up to 10 seconds,
+which ensures that leaving users can at most only decrypt meeting content sent
+shortly thereafter (or up to a couple of minutes if the
+server is suppressing messages to prevent the leader from rotating the key).
+Until a user begins to encrypt using a new key unknown to the leaving
+participant, the leaving participant will continue to be displayed as participating
+in the user interface (detailed in Section~\ref{subsubsec:lpl}).
 
-It's important to note each $\mk$ is independently generated, so knowing the previous $\mk$ provides
+As a final security measure, leaders rotate the meeting key every five minutes even if there have not
+been any participant changes, which provides certain \textit{liveness} properties detailed in Section \ref{subsubsec:liveness}.
+
+We stress that each $\mk$ is independently generated, so knowing the previous $\mk$ provides
 no information about the subsequent $\mk'$.
 
+\textbf{Note: } Before Zoom client version 5.12, newly joined users might have received keys up to 15 seconds old. Additionally, participants did not wait for the corresponding leader-signed participant list to start encrypting with a new meeting key.
 
 \subsubsection{Leader Participant List}\label{subsubsec:lpl} A meeting leader maintains a ``leader
 participant list'' ($\LPL$) tabulating all the users in the meeting. For each user currently in the
@@ -497,15 +507,14 @@ $pk_i$, $\userID$, and $\hardwareid$, as well as their display name. For users w
 meeting, the $\LPL$ tracks only their $\userID$, $\hardwareid$, $\ivk_i$, and display name.
 
 The $\LPL$ is used to drive the participant list in the user interface, which records both users
-currently in the meeting and those who have left. It is possible that race conditions during leader
-changes (caused by a bad network or a malicious server) could prevent some meeting participants from
-being reflected in the ``left'' section of the participant list.
+currently in the meeting and those who have left.
 
-Initially, the participant list only identifies users through their self-selected display name and
-profile picture. Changes to participant's display names are relayed by the server to the leader, who
-includes them in the $\LPL$, so a compromised server can change the display names of any meeting
+Currently, the participant list in the user interface only identifies users through their self-selected display name and
+profile picture. Changes to participants' display names are relayed by the server to the leader who
+includes them in the $\LPL$: a compromised server can change the display names of any meeting
 participant. As such, display names should not be relied on to establish the participants'
-identities. Later, we will introduce a strong notion of identities to address these limitations.
+identities. Attestations from identity providers (Section \ref{subsec:idpattestationmeetings}) can also strengthen in-meeting identity by displaying additional identifiers that cannot be tampered with.
+Later, we will introduce a strong notion of cryptographic identity in meetings (Section \ref{sec:identitykeymanagement}) to further address these limitations.
 
 The $\LPL$ is represented as a sequence of operations such as adding a user to the meeting, or
 noting when a user has left. Every time there is such an operation, the leader increments a counter
@@ -518,12 +527,13 @@ Leaders post a signature over the latest link to the bulletin board whenever mem
 broadcast it over the signaling channel at designated ``heartbeat intervals'':
 %
 \begin{align*}
-\zoomsignsign \left(\isk_{\LL}, \context, (\binding_{\LL} \| \mathsf{SHA256}(\LPL_v) \| v \| t \| \mkSequenceNumber ) \right)
+    H_i &= \mathsf{SHA256}(\binding_{\LL} \| \mathsf{SHA256}(\LPL_v) \| v \| t \| \mkSequenceNumber \| H_{i-1} \| \textsf{timestamp}_l  ) \\
+    S_i &= \zoomsignsign \left(\isk_{\LL}, \context, H_i \right)
 \end{align*}
 %
-Where $\context$ is $\texttt{"Zoombase1-ClientOnly-Sig-Leader\-Participant\-List"}$, $t$ increments
-on every send, $v$ increments whenever the $\LPL$ changes, and $\mkSequenceNumber$ increments on
-every $\mk$ rotation.
+where $\context$ is $\texttt{"Zoombase1-ClientOnly-Sig-Leader\-Participant\-List"}$, $t$ increments
+on every send, $v$ increments whenever the $\LPL$ changes, $\mkSequenceNumber$ increments on
+every $\mk$ rotation, $H_{i-1}$ is the previous heartbeat's hash, and $\textsf{timestamp}_l$ is a monotonically increasing timestamp as recorded by the leader's local clock.
 
 By replaying the sequence of operations in the bulletin board, the other participants can
 reconstruct the current list of participants, so they know who to rekey for if the leader drops out
@@ -531,7 +541,12 @@ and they become the new leader. Evil servers might try to withhold updates the l
 hide when bad actors are kicked out. As such, the leader also sends a low bandwidth ``heartbeat''
 over the signaling channel. Heartbeats should go out at least every 10 seconds. All participants
 observe and verify these heartbeats, and if they fail to receive ten heartbeats in a row, they
-should drop out of the meeting.
+should drop out of the meeting. This mechanism prevents the server from withholding updates to the $\LPL$ for
+ an extended period of time.
+
+Heartbeats certify both the $\mkSequenceNumber$ and the list of participants for whom $\mkSequenceNumber$ is accessible.
+Because users wait for the heartbeat certifying a certain meeting key before encrypting with it, the
+participant list in the user interface always reflects the list of participants users are encrypting for.
 
 When a leader does drop out of a meeting, the Zoom server picks a new leader arbitrarily and sends a
 signal to participants indicating that the leader has changed. The new leader then coalesces the
@@ -543,6 +558,24 @@ over the corresponding $\binding_i$, and ensure that the hash remains stable acr
 leader changes. If a user leaves the meeting, it is enforced that any user who rejoins with the same
 $\userID$ and $\hardwareid$ must have the same $\ivk_i$, but not necessarily the same $\pk_i$. These
 guarantees persist only over the course of a single meeting.
+
+One unavoidable attack the Zoom server can perform is \textit{partitioning} the meeting: for example, split the participants of an ongoing meeting in two groups (each with its own leader), and tell each group that the other half dropped out. Partitioning attacks cannot be avoided while tolerating participants abruptly dropping out of meetings. However, since each heartbeat includes the previous heartbeat's hash in the signature material, if two participants accept the same heartbeat (i.e., they are in the same partition) they must also agree on the history of the meeting. In other words, partitions cannot be reconciled as their heartbeat chains have diverged.
+
+\textbf{Note: } Before Zoom client version 5.13, the heartbeat signature did not include the previous heartbeat's hash in the signature material.
+As such, different meeting participants might have disagreed on the past history of the meeting, in the case of meeting partitions
+due to bad network conditions or server compromise.
+
+\subsubsection{Liveness}\label{subsubsec:liveness}
+An important security property in video meetings (and other synchronous communications) is \textit{liveness}: attackers
+should not be able to significantly delay data streams or meeting management actions (such as adding or removing users).
+
+To strengthen liveness, each meeting participant generates and uploads
+192-bit unpredictable nonces $N$ at regular intervals\footnote{To limit bandwidth, the frequency degrades quadratically with the number of participants in the meeting. For meetings of at most 10 participants, the interval is about 3 minutes.}. When the meeting leader rekeys the meeting, each participant's
+ciphertext includes their most recent nonce as associated data. 
+Participants only accept ciphertexts whose associated data includes one of their two most recent nonces (to tolerate race conditions). This ensures that received keys have been sent recently, i.e., \textit{after} the recipient generated the relevant nonce.
+This mechanism guarantees the recency of \textit{meeting keys}. Because leaders rotate the meeting key at least every five minutes (more frequently if the set of participants changes), and users stop using old meeting keys for decryption 10 seconds after receiving a newer key, meeting streams are also guaranteed to be relatively recent.
+
+\textbf{Note: } Before version 5.13 of the Zoom meetings client, the liveness bounds worsened with the number of leader changes. Despite that, attacking liveness by forcing a high number of leader changes would likely make participants suspicious: the UX notifies users of each leader change, which is not frequent in regular meetings.
 
 \subsubsection{Locked Meetings}
 \label{subsubsec:lockedmeetings}
@@ -556,10 +589,11 @@ meeting is locked only when it is set in $\LPL$; the server does not have the ab
 this part of the user interface. When a locked meeting becomes unlocked (as indicated by the
 $\LPL$), all participants' user interfaces display a prominent warning indicating the change. 
 
-Note that due to the tolerances in propagating the $\LPL$, the server might prevent a participant
+Note that due to the tolerances in propagating the $\LPL$, the server might prevent some participants
 from learning that the host has locked a meeting by withholding the relevant link and selecting a
-new host within 100 seconds. This would result in either a meeting partition or warnings about the
-unlocking for any participant who had received a link that locked the meeting.
+new host within 100 seconds. However, because each heartbeat includes the hash of the previous one,
+this would result in a meeting partition between the participants who received the lock link and
+those who didn't.
 
 While the meeting is locked, the leader's client will refuse to send the meeting key to any new
 participants who request to join. However, if a user leaves and then rejoins with the same $\ivk$
@@ -713,49 +747,93 @@ change would defeat the two attacks above, but with major drawbacks:
 Given these challenges, we will revisit our decisions at a later date as we gain more operational
 experience with the current proposal.
 
+\subsection{IDP Attestations for E2EE Meetings}
+\label{subsec:idpattestationmeetings}
+
+If a user's account is configured to support IDP attestations
+(Section~\ref{sec:idpattestations}), they can use an attestation in E2EE
+meetings to prove to other meeting participants that they are part of a specific
+organization (identified by its ADN) in which they hold a specific email address
+(as vouched for by the organization's designated IDP, and which they logged into
+Zoom with). Attestations by a trusted IDP reduce the need to explicitly check security codes.
+
+Upon joining a meeting, each device obtains an IDP attestation, which
+authenticates the signing key $\ivk$ used to join the meeting as described in
+Section~\ref{subsec:generateattestation}. Currently, the \texttt{zoom-identity-snapshot} field of the attestation
+includes the $\ivk$; once we start leveraging sigchains in meetings (see
+Section~\ref{subsec:keyagreementidentity} for details),  we plan to extend the
+snapshot with the tails of the given user's sigchains. 
+
+The user signs the IDP attestation and their ADN with their $\ivk$, and
+temporarily stores the attestation and signature on the Zoom servers. To share
+this information only with the intended meeting participants, the user posts to
+the meeting bulletin board an ``identity sharing token'' (along with the signed
+$\binding_i$ described in Section~\ref{subsubsec:partikeygen} ``Participant Key
+Generation''), which other participants can present to the server in exchange
+for the attestation. Identity sharing tokens are computed as an HMAC of some
+metadata about the attestation (such as whether it contains the user's email
+address), using a random 32-byte symmetric key generated by the Zoom servers for
+each user's device in each meeting. Identity sharing tokens have a lifetime of
+24 hours, and can be used to fetch any matching attestation for that user's
+device.  An IDP attestation can be used across multiple meetings but has a
+relatively short lifetime, which is set by the IDP, defaulting to 48 hours.
+
+When displaying another participant's identity in the user interface during a
+meeting, clients that successfully fetch an identity attestation will verify the
+signature of ADN and attestation by $\isk$, verify that this ADN (in addition to
+the email address in the attestation) matches what is provided by the Zoom
+server, and verify the attestation as detailed in
+Section~\ref{subsec:validateattestation}; in particular, the $\ivk$ in the
+$\binding$ must be consistent with the contents of attestation's
+\texttt{zoom-identity-snapshot} field. If the checks are successful, the
+interface displays to the user the email address from the attestation and
+details about the authenticating ADN and IDP. The verifying user should review
+the displayed email address and ADN and confirm that they are the expected
+identifiers for the user they are meeting with.
+
+Meeting participants' clients may perform these checks asynchronously during a
+meeting, but in the future we may offer the option to configure a meeting such
+that the host must complete this verification before admitting
+a joining participant. Requiring this verification
+before key exchange can help increase the security of meetings that are, 
+for example, restricted to users in specified accounts. 
+
 \subsection{E2EE Meetings with Cryptographic Identity}
 \label{subsec:keyagreementidentity}
 \textbf{Note:} This feature is not currently available. We plan to release it in a future update.
 
-Our E2E key agreement protocol provides passive security to E2E Zoom meetings. In the future, we
-will leverage cryptographic identity to combat MitM attacks.
+In Section~\ref{sec:identitykeymanagement} we describe how we leverage sigchains to build a strong
+multi-device notion of cryptographic user identity. We plan to leverage this notion in the context
+of E2EE meetings in order to strengthen the guarantees provided by security codes and IDP
+attestations in detecting and preventing MitM attacks.
 
-The server signature as described in Section~\ref{subsubsec:servercert} will also include the
-sigchain tails for the corresponding user, email, account, and ADN sigchains.
+The server signature $\sig^i_{\mathsf{Server}}$ as described in Section~\ref{subsubsec:servercert} will also include the
+sigchain tails for the corresponding user, email, account, and ADN sigchains. These tails will also
+be included in the signed $\binding_i$ generated in the ``Participant Key Generation'' procedure of
+Section~\ref{subsubsec:partikeygen}, and in the \texttt{zoom-identity-snapshot} field of the IDP
+attestation (if one is used in the meeting). 
 
-In the ``Participant Key Generation'' procedure of Section~\ref{subsubsec:partikeygen}, the signed
-$\binding_i$ will be extended to include the corresponding user, email, account, and ADN sigchains.
-This ensures that the server cannot equivocate the user's own account. If the account uses an \idp,
-the client will fetch and include an attestation from the \idp in the binding as well (see
-Section~\ref{sec:idpattestations}).
-
-In a meeting, Alice's client verifies Bob's sigchains and \idp attestation (if applicable) before
+In a meeting, Alice's client verifies Bob's sigchains (and IDP attestation, if present) before
 Alice's client displays identifiers for Bob in the UI. To do so, Alice's client fetches Bob's user
-sigchain (which includes $\ivk_i$), email sigchain, account sigchain, ADN sigchain, and \idp
-attestation. Alice's client verifies the server signature of the binding, checks that Bob's latest
-sigchain is consistent with any previous retrievals of Bob's sigchain, and verifies the \idp
-attestation by connecting to the ADN and verifying the \idp signature. Meeting participants' clients
-may perform these checks asynchronously during a meeting, but the meeting may be configured to
-require that the host completes this verification before the host performs the key exchange with a
-joining participant. For example, requiring this verification before key exchange can help increase
-the security of meetings that are restricted to users in specified accounts. Details about how
-users' identities are displayed in meetings (such as in the meeting room, participant list, and
-waiting room) are described in Sections~\ref{subsec:displayid} and \ref{subsec:contactsync}.
+sigchain (which includes $\ivk_i$), email sigchain, account sigchain, ADN sigchain. Alice's client
+verifies the server signature $\sig^i_{\mathsf{Server}}$, checks that the tails
+of the received sigchains match those in $\sig^i_{\mathsf{Server}}$ and in the
+$\binding$, checks that Bob's latest sigchain is consistent with any previous
+retrievals of Bob's sigchain, and verifies the IDP attestation if one is present
+(including checking that the sigchain tails included in the attestation match).
+As for IDP attestations, these checks might be performed asynchronously, or
+mandated before the host performs the key exchange to limit who can access a
+meeting.
+
+To minimize the need to request new attestations, users accept attestations that
+do not necessarily cover the latest sigchain tails as long as the new links
+added since the IDP's snapshot do not revoke the device currently being used in
+the meeting and do not change the user's email or account identifiers.
 
 The Zoom server will provide access control to ensure that sigchains are visible to other meeting
 participants only for a short duration after a meeting begins. If Alice has never been in a meeting
 with Charlie, Charlie will have no information regarding Alice's sigchain's contents, length, or
 update frequency.
-
-We stress that seeing a specific user identity in the participant list of a meeting does not imply
-that the corresponding user has chosen to participate in the meeting or is still actively
-participating, but only that that user could potentially have access to the encrypted meeting
-contents. A malicious insider could either trick the leader into including a user in the participant
-list (when the user is not actually present in the meeting), or hide the fact that a participant has
-left a meeting (so that other users are convinced they are still participating). All such
-participants would still trigger Contact Sync warnings as detailed in
-Section~\ref{subsec:contactsync}, and clients will remember their identities for future meetings. We
-believe that preventing these issues would add too much complexity and overhead to the protocol.
 
 \subsection{Security Properties for E2EE Meetings}
 \label{subsec:secprop}
@@ -782,47 +860,54 @@ insider can force participants to drop out of a meeting, as well as partition th
 meetings, each with its own leader, and add extra participants circumventing all the above
 server-enforced features. Our protocol ensures that the meeting leader will be able to detect any
 participant obtaining access to meeting encryption keys by monitoring the participant list for
-unexpected entries (for example, by recognizing the participants' faces in their video streams).
+unexpected entries (for example, by recognizing the participants' faces in
+their video streams). If the host observes the same user leaving the meeting
+four or more times, the participant list will reflect the number of observed
+leaves. Liveness properties ensure that actions like rekeying the
+meeting or adding/removing participants cannot be arbitrarily delayed, and
+furthermore, that audio/video streams displayed are relatively recent.
+
 Detecting unauthorized participants can be challenging in large meetings or in certain views, such
 as when the leader is sharing their screen. In the future, a stronger notion of identity will be
 leveraged to highlight potential eavesdroppers in the UI, such as those outside of the host's
 organization or guest users.
 
-A leader's view of the ``active'' participants list shows everyone who is in the meeting (i.e.,
-everyone who has been given the current meeting key, or the next one if a key rotation is in
-progress). If the host observes the same user leaving the meeting four or more times, the
-participant list will reflect the number of observed leaves. This alert helps participants notice
-when an attacker repeatedly joins and leaves a meeting rapidly, which would allow the attacker to
-learn most of the meeting keys but remain in the ``left'' column for the majority of the meeting.
-Due to the distributed nature of the system, this view of the participant list can be slightly
-out-of-date, both for the leader and for the other participants, but will eventually converge if
-there is a long enough span without participant churn. Some race conditions, such as participants
-quickly joining and leaving a meeting while the meeting leader is changing, might also cause
-participants who left a meeting to not be reflected in the ``left'' section of the participant list.
-This is necessary to guarantee a smooth meeting experience under poor network conditions. Heartbeat
-messages ensure that a key is rotated in a timely manner after an unwelcome participant has been
-removed from the meeting.
+We stress that, even when using IDP attestations, seeing a specific user identity in the participant
+list of a meeting does not imply that the corresponding user has chosen to participate in the
+meeting or is still actively participating, but only that that user could potentially have access to
+the encrypted meeting contents. A malicious insider could either trick the leader into including a
+user in the participant list (when the user is not actually present in the meeting), or hide the
+fact that a participant has left a meeting (so that other users are convinced they are still
+participating). All such participants would still trigger Contact Sync warnings as detailed in
+Section~\ref{subsec:contactsync} (once that feature is deployed), and clients will remember their
+identities for future meetings. We believe that preventing these issues would add too much
+complexity and overhead to the protocol.
 
 An active attacker can also try to perform a MitM attack against the meeting. This class of attacks
 is mitigated by the meeting leader security code, which should be re-checked every time a
 participant joins or rejoins the meeting (including when moving in and out of breakout rooms), or
-whenever the meeting leader security code changes as indicated by a UI notification. We stress that,
-as discussed in Section~\ref{subsec:bor}, when in an E2EE meeting using Breakout Rooms, participants
-should be skeptical of broadcast messages from the meeting host and should carefully monitor the
-participant list of the main meeting.
+whenever the meeting leader security code changes as indicated by a UI notification.
+
+When leveraged in E2EE meetings (under the assumptions in Section~\ref{subsec:idpsecurity}) an IDP
+attestation confirms that a meeting participant's long-term device key belongs to a member of a specific account (identified by its ADN), which has vouched for that participant's identity (e.g. email address) through a third party identity provider. IDP attestations are a mitigation against MitM attacks and serve as an alternative to checking security codes.
+
+We also stress that, as discussed in Section~\ref{subsec:bor}, when in an E2EE meeting using Breakout
+Rooms, participants should be skeptical of broadcast messages from the meeting host and should
+carefully monitor the participant list of the main meeting.
+
+We have published~\cite{eurocrypt-2023-32928} a formal security analysis of our core E2EE meetings protocol,
+which precisely characterizes the liveness, confidentiality, and security properties it achieves.
 
 \subsubsection{Areas to Improve}
 While E2E meetings offer strong security properties to Zoom users, there are still opportunities for
 improvement, both in the key agreement layer and in the identity layer.
 \begin{description}
-\item {\bf Meddler-in-the-Middle.} The meeting leader security code and phone security code
-mechanisms above are countermeasures for the classic MitM attack, wherein Bob isn't
-actually connecting to Zoom, he's connecting to Eve who is proxying his communications. But our
-solution isn't perfect. First off, it can be defeated by deep fake technology; second, it's clunky
-from a UX perspective; and third, in meetings the leader may have to perform the ceremony multiple
-times with any users joining the meeting late. Sigchain-backed identities
-(Section~\ref{subsec:keyagreementidentity}) and the ZTT (Section~\ref{sec:ztt}) will provide better
-security.
+\item {\bf Meddler-in-the-Middle.} The meeting leader security code and IDP attestations are
+countermeasures for the classic MitM attack, wherein Bob isn't actually connecting to Zoom; he's
+connecting to Eve who is proxying his communications. Both solutions have limitations: they can be
+defeated by deep fake technology, introduce some UX friction, or require additional trust assumptions.
+Sigchain-backed identities (Section~\ref{subsec:keyagreementidentity}) and the ZTT
+(Section~\ref{sec:ztt}) will further improve the security properties and UX.
 \item {\bf Anonymous Eavesdropper.} An adversary, in conjunction with a malicious Zoom server, types
 in a name of their choosing, turns off video, mutes their microphone and just observes. Checking
 security codes and cryptographic identity can help address this problem partially.

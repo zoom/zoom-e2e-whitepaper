@@ -28,6 +28,19 @@
 	abstract     = {This document specifies a simple Hashed Message Authentication Code (HMAC)-based key derivation function (HKDF), which can be used as a building block in various protocols and applications. The key derivation function (KDF) is intended to support a wide range of applications and requirements, and is conservative in its use of cryptographic hash functions. This document is not an Internet Standards Track specification; it is published for informational purposes.},
 }
 
+@misc{rfc7636,
+	series       = {Request for Comments},
+	number       = 7636,
+	howpublished = {RFC 7636},
+	publisher    = {RFC Editor},
+	doi          = {10.17487/RFC7636},
+	url          = {https://rfc-editor.org/rfc/rfc7636.txt},
+	author       = {Sakimura, N. and Bradley, J. and N. Agarwal},
+	title        = {{Proof Key for Code Exchange by OAuth Public Clients}},
+	year         = 2015,
+	month        = september,
+}
+
 @inproceedings{chase2019seemless,
 	title     = {{SEEMless}: Secure End-to-End Encrypted Messaging with less Trust},
 	author    = {Chase, Melissa and Deshpande, Apoorvaa and Ghosh, Esha and Malvai, Harjasleen},
@@ -42,6 +55,15 @@
 	booktitle = {24th {USENIX} Security Symposium ({USENIX} Security 15)},
 	pages     = {383--398},
 	year      = {2015}
+}
+
+@inproceedings{rzks,
+  title={Rotatable zero knowledge sets: Post compromise secure auditable dictionaries with application to key transparency},
+  author={Chen, Brian and Dodis, Yevgeniy and Ghosh, Esha and Goldin, Eli and Kesavan, Balachandar and Marcedone, Antonio and Mou, Merry Ember},
+  booktitle={Advances in Cryptology--ASIACRYPT 2022},
+  pages={547--580},
+  year={2023},
+  organization={Springer}
 }
 
 @article{langley2013certificate,
@@ -66,12 +88,13 @@
     howpublished = {Available at \url{https://keybase.io}}
 }
 
-@misc{messagefranking,
-    author = {Paul Grubbs and Jiahui Lu and Thomas Ristenpart},
-    title = {Message Franking via Committing Authenticated Encryption},
-    howpublished = {Cryptology ePrint Archive, Report 2017/664},
-    year = {2017},
-    note = {\url{https://eprint.iacr.org/2017/664}},
+@inproceedings{messagefranking,
+  title={Message franking via committing authenticated encryption},
+  author={Grubbs, Paul and Lu, Jiahui and Ristenpart, Thomas},
+  booktitle={Advances in Cryptology--CRYPTO 2017},
+  pages={66--97},
+  year={2017},
+  organization={Springer}
 }
 
 @misc{sp80038d,
@@ -112,3 +135,11 @@
 @misc{oidc, title={{OpenID} Connect Core 1.0 Authorization Code Flow},
       url={https://openid.net/specs/openid-connect-core-1_0.html#CodeFlowAuth},
       note={\url{https://openid.net/specs/openid-connect-core-1_0.html#CodeFlowAuth}}}
+      
+@inproceedings{eurocrypt-2023-32928,
+title={End-to-End Encrypted Zoom Meetings: Proving Security and Strengthening Liveness},
+author={Dodis, Yevgeniy and Jost, Daniel and Kesavan, Balachandar and Marcedone, Antonio},
+booktitle={Advances in Cryptology--EUROCRYPT 2023},
+year=2023,
+organization={Springer}
+}

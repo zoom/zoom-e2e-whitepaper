@@ -6,15 +6,15 @@ corruptions after-the-fact. For instance, if an insider adds a new device onto A
 impersonate her in a meeting while she is offline, Alice will detect the attack after she comes back
 online, since the attacker had to commit the malicious change to Alice's sigchain to the ZTT.
 Ideally, Alice could prevent unauthorized device additions from happening in the first place. Note
-that users whose identities are vouched for by a trusted third-party $\idp$
-(Section~\ref{sec:idpattestations}) already have good protections as long as their $\idp$ is not
+that users whose identities are vouched for by a trusted third-party IDP
+(Section~\ref{sec:idpattestations}) already have good protections as long as their IDP is not
 compromised. We want to offer a strong alternative to all users that does not rely on external
 parties.
 
 Recall that users currently login to Zoom via SSO, OAuth, or simple username and password. Their
 devices' keys are authenticated by multiple signatures: a self signature, an optional approval
 signature by an older device (Section~\ref{subsec:multidev}), a signature by Zoom (as part of the
-inclusion in the ZTT, once it is deployed), and an optional attestation from the $\idp$.
+inclusion in the ZTT, once it is deployed), and an optional attestation from the IDP.
 
 Further validations of the device keys are possible. For example, users can sign new devices with
 existing devices at the time they are first added (as opposed to in a later approval), potentially
