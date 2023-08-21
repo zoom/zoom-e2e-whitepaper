@@ -67,11 +67,11 @@ rather than being directly encoded, sensitive information on a sigchain link is 
 commitment: rather than \texttt{alice@example.com}, a sigchain link could contain
 $$\mathsf{COMMIT}(\texttt{alice@example.com}) =
     \mathsf{HMAC}(\mathsf{randomKey}, \texttt{alice@example.com}).$$ %
-The server gives all users the entire sigchain link so that they can check that its signatures
-and hashes are valid, but only Alice's devices will receive the plaintext email addresses and
-32-byte random keys corresponding to previous email addresses. \textsf{COMMIT} can also be used
-to selectively delete parts of links such as device names: a server can throw away the random
-HMAC key as well as the plaintext data, and the signature over the link will still verify.
+The server gives all users the entire sigchain link so that they can check that its signatures and
+hashes are valid, but only Alice's devices will receive the plaintext email addresses and 32-byte
+random keys corresponding to previous email addresses. \textsf{COMMIT} can also be used to
+selectively delete parts of links such as device names: a server can throw away the random HMAC key
+as well as the plaintext data, and the signature over the link will still verify.
 
 \subsubsection{Overview of Sigchain Types}
 
@@ -90,8 +90,8 @@ sigchains:
     the user's email address, \accountID, and the set of their devices and their trust
     relationships.
 \item Email sigchains store, for each email address, the associated \userID.
-\item Account sigchains store, for each \accountID, both the ADN and identity provider associated with
-    the account.
+\item Account sigchains store, for each \accountID, both the ADN and identity provider associated
+    with the account.
 \item ADN sigchains keep track of, for each domain name, the \accountID to which the domain is
     associated.
 \item Membership sigchains keep track of, for each \accountID, the {\userID}s within the account.
@@ -113,10 +113,10 @@ account either gets another user or an ADN.
 User sigchains record changes to a user's identity. There are several types of user sigchain links,
 each representing a different way to change a user's identity.
 
-\paragraph{EmailChange.} As mentioned in Section~\ref{subsec:displayid}, users can set and change the
-email addresses that will be displayed for or used to communicate with other users. Two users can switch email addresses,
-but the server will prove that two users do not have the same email address at the same time. An
-\textsf{EmailChange} link will have the following fields:
+\paragraph{EmailChange.} As mentioned in Section~\ref{subsec:displayid}, users can set and change
+the email addresses that will be displayed for or used to communicate with other users. Two users
+can switch email addresses, but the server will prove that two users do not have the same email
+address at the same time. An \textsf{EmailChange} link will have the following fields:
 
 
 \begin{Verbatim}
@@ -205,11 +205,12 @@ device and a human-readable name:
 \end{Verbatim}
 
 This link specifies a device identifier (unique among the devices associated with this user), a
-signing public key, an encryption public key, as well as a device name and type. Note that the
-device name is hidden by a commitment, because users other than the owner of the chain do not need
-to see it. In order to support reusing names, the device name includes an incrementing version
-component, which will be visible in the user interface. Device names allow the user to have a
-human-readable, unambiguous way to distinguish their devices.
+signing public key, an encryption public key, as well as a device name and type. The device can be a
+virtual device, such as a backup key (see Section~\ref{subsubsec:backupkeys}).  Note that the device
+name is hidden by a commitment, because users other than the owner of the chain do not need to see
+it. In order to support reusing names, the device name includes an incrementing version component,
+which will be visible in the user interface. Device names allow the user to have a human-readable,
+unambiguous way to distinguish their devices.
 
 The link also specifies the new per-user key public keys. The encryptions of the new PUK seeds for
 older devices are not represented within the sigchain link, but are sent separately to the server,
@@ -220,7 +221,7 @@ devices, which justifies our claim that later devices should trust the validity 
 (unrevoked) ones.
 
 To ensure that users know the corresponding device private key, each $\deviceadd{}$ link requires a
-signature by \textsf{deviceEd25519PublicKey}.
+signature from that key, which can be checked against \textsf{deviceEd25519PublicKey} in the link.
 
 \paragraph{UserRoot.} This link should always be the first link in a user's sigchain, and can only
 appear as such. It is equivalent to a DeviceAdd and specifies all the same kinds of information
@@ -254,20 +255,29 @@ used to construct a trust graph as described in Section~\ref{subsec:multidev}.
 
 \paragraph{DeviceAddAndApprove.} This link is equivalent to a fused $\deviceadd{}$ and
 $\batchapprove{}$, but allows us to reduce the overall number of sigchain links and also guarantee
-that intermediate states of some operations can't appear on the sigchain. It is posted by an
+that intermediate states of some operations can't appear on the sigchain. For example, this link is
+used to add and approve escrow keys (see Section~\ref{subsubsec:escrowkeys}). It is posted by an
 existing device, the approver, but also specifies a device identifier, name, and keys for a new
 device. Uniqueness of the new device's identifier, name, and keys are enforced just like in
 $\deviceadd{}$. This link implies that the approver trusts all devices created up to and including
 the device being added by this link. Signatures from both the approver and the new device are
-required.
+required. When this link is used to add an escrow device, the link also records the identifier for
+the EA sigchain (see Section~\ref{subsubsec:escrowadmins}), its tail, and its PUK generation.
 
 \paragraph{PerUserKeyRotate.} If a device notices that a device revocation (either a self
-revocation, or one from the website) has occurred after the most recent PUK was generated, the device
-will perform another PUK rotation using a $\peruserkeyrotate{}$ link. This guarantees that even if
-the revoked device was compromised, this newest PUK is still confidential. For personal storage,
-staleness is not an issue, as any device trying to encrypt data will first rotate the per-user keys.
-But if other users are encrypting data for a compromised PUK and the server cooperates, data could
-be readable by a revoked device. This link is signed by the device that is rotating the PUK.
+revocation, or one from the website) has occurred after the most recent PUK was generated, the
+device will perform another PUK rotation using a $\peruserkeyrotate{}$ link. This guarantees that
+even if the revoked device was compromised, this newest PUK is still confidential. For personal
+storage, staleness is not an issue, as any device trying to encrypt data will first rotate the
+per-user keys. But if other users are encrypting data for a compromised PUK and the server
+cooperates, data could be readable by a revoked device. This link is signed by the device that is
+rotating the PUK.
+
+\paragraph{LockdownMode.} A device can enable or disable lockdown mode (see
+Section~\ref{subsubsec:lockdownmode}) using this link. A user can enable lockdown mode if all of the
+user's unrevoked devices are a single approval class. When in lockdown mode, only approved devices
+are allowed to rotate the PUK or approve new devices.
+
 
 \subsubsection{Email Sigchains}
 
@@ -329,6 +339,24 @@ ADN sigchain. If an account is no longer using an ADN, the \textsf{adnChange} se
   "adnChange": COMMIT({
     "adn": "example.org",
     "adnChainSequenceNumber": 9
+  })
+}
+\end{Verbatim}
+
+\textsf{EscrowAdmin} links enable escrow for the account by including the Escrow Admin sigchain's
+{\userID} and its current latest sequence number (see Section~\ref{subsubsec:escrowadmins}). To
+disable escrow, the link should set the {\userID} to null with the other field omitted.
+
+\begin{Verbatim}
+{
+  "sigchainType": "Account",
+  "linkType": "EscrowAdmin",
+  ...
+  "accountID": "abef02...",
+
+  "escrowAdmin": COMMIT({
+    "userID": "ebc03d...",
+    "escrowAdminChainSequenceNumber": 9
   })
 }
 \end{Verbatim}
@@ -405,17 +433,17 @@ fingerprints are useful in two contexts: to verify new devices before approving,
 keys used to communicate with other users.
 
 During the device addition and approval process, a malicious insider has the opportunity to conduct
-a MitM attack. After the new device is added, the insider creates a copy of the
-user's sigchain but replaces the keys in the final $\deviceadd{}$ link with keys controlled by the
-attacker, using the same device name. The forged copy is served to older devices while the honest
-sigchain is served to the new device. When the older device sees the approval interface, only the
-device name is shown, and so the user may be tricked into accepting the server's device
-unintentionally (which would imply sharing all previously encrypted data with the attacker).
-However, in this case the two devices would necessarily display different fingerprints (as they bind
-to sigchains containing different keys, and the hash is collision resistant). Users concerned about
-MitM attacks can check, before approving new devices, that the fingerprint shown on
-the approving device matches the one from the device(s) they intend to approve. This ensures that an
-attacker cannot interfere with the process and gain access to historical encrypted data.
+a MitM attack. After the new device is added, the insider creates a copy of the user's sigchain but
+replaces the keys in the final $\deviceadd{}$ link with keys controlled by the attacker, using the
+same device name. The forged copy is served to older devices while the honest sigchain is served to
+the new device. When the older device sees the approval interface, only the device name is shown,
+and so the user may be tricked into accepting the server's device unintentionally (which would imply
+sharing all previously encrypted data with the attacker). However, in this case the two devices
+would necessarily display different fingerprints (as they bind to sigchains containing different
+keys, and the hash is collision resistant). Users concerned about MitM attacks can check, before
+approving new devices, that the fingerprint shown on the approving device matches the one from the
+device(s) they intend to approve. This ensures that an attacker cannot interfere with the process
+and gain access to historical encrypted data.
 
 Sigchain fingerprints are also useful when communicating with other users. For example, when a user
 emails another user for the first time, a malicious server could potentially swap out the intended
@@ -430,41 +458,3 @@ message came from the expected sender and was not altered.
 In the user interface, fingerprints are represented in hexadecimal. Users can always view their own
 fingerprint from the Zoom client, and Zoom products will show the fingerprints of other users in
 specific scenarios where it is useful.
-
-\subsection{Backup Keys}
-\label{subsec:backupkeys}
-
-A backup key acts as a ``virtual device'' that can be added to a user's sigchain. Instead of
-corresponding to an actual device, it is simply represented as a string of letters and digits, such
-as
-\[ \texttt{ZR30 4D11 5HJM RJG2 6H75 78DH B0VS 4KSF}. \] The first four characters are used as a key
-identifier and are not considered private. Backup keys have at least 128 bits of private entropy, as
-well as built-in error correction to tolerate small copy-pasting mistakes.
-
-From a trusted device's Zoom client, a user can generate a backup key and add it as a new ``device''
-to the user's sigchain with a $\deviceaddandapprove{}$ link. The backup key string is used to derive
-a seed using sodium{}'s~\cite{libsodium} \texttt{argon2id}, which is then used to derive the
-device's signing and encryption keys. Like normal devices, backup keys can be revoked.
-
-
-\subsubsection{Account Recovery}
-
-In the case that a user loses all their devices, they can log onto another device and enter their
-backup key to write a $\batchapprove{}$ link to the user's sigchain that originates from the backup
-key. This gives the new device access to all the old PUKs that the backup key had access to.
-
-\subsubsection{Using Backup Keys for Escrow}\label{subsec:backupkeyescrow}
-
-\textbf{Note:} Escrow using backup keys is not currently available. Users can still
-manually generate backup keys and send them to their IT administrator out of band.
-
-Organizations using Zoom may wish to have access to E2E communications involving their members, to
-protect against data loss or to support legal retention and discovery. We refer to solutions that
-give such organizations cryptographic access as \textit{escrow}.  While we are building a more
-usable and robust escrow solution, backup keys can initially provide the minimal necessary
-functionality: users can generate backup keys and send them to their IT department for safekeeping.
-When escrow is enabled for an account, users in that account are notified before they are allowed to
-continue use of Zoom products. Each user receives notice that their data is being escrowed the
-first time they access their Zoom Mail Service email on one of their devices. The user should verify
-the escrow administrator's sigchain fingerprint before continuing, after which the user's client
-automatically sends an end-to-end encrypted email with a backup key to their account administrator.

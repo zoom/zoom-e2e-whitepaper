@@ -5,9 +5,9 @@ only with the intended parties across many Zoom products, and helps prevent impe
 ``meddler-in-the-middle attacks'' (MitM)\footnote{``Meddler-in-the-middle attack'' is also known as
 ``man-in-the-middle attack.''}. End-to-end encryption is only as secure as the ends: if Alice thinks
 she is talking to her coworkers, but instead her competitors are participating in the meeting
-(perhaps with their video off) or there is a MitM, encryption will not be
-sufficient to protect her. Zoom aims to give users helpful and trustworthy information to evaluate
-the identity of users they interact with.
+(perhaps with their video off) or there is a MitM, encryption will not be sufficient to protect her.
+Zoom aims to give users helpful and trustworthy information to evaluate the identity of users they
+interact with.
 
 This section describes how we define and represent a user's identity to the people they interact
 with on Zoom, as well as how we enforce that these identities are consistent over time and cannot be
@@ -62,12 +62,11 @@ to be identified by displaying their email addresses and information about their
 other users. Second, each user's identity includes the set of devices (and their cryptographic keys)
 controlled by that user. We describe a device model that lets us reason about how a user's devices
 and keys change over time, and helps us formalize the concept of trust between devices. The device
-model allows a user's devices to communicate amongst themselves in addition to
-securely communicating with other users. When a device, logged in for a given
-user, is first used for a feature requiring cryptographic identity, it
-automatically generates encryption and signing key pairs, a process called
-\textit{provisioning}. These device key pairs will then be used to
-negotiate additional encryption key pairs shared between the users' devices.
+model allows a user's devices to communicate amongst themselves in addition to securely
+communicating with other users. When a device, logged in for a given user, is first used for a
+feature requiring cryptographic identity, it automatically generates encryption and signing key
+pairs, a process called \textit{provisioning}. These device key pairs will then be used to negotiate
+additional encryption key pairs shared between the users' devices.
 
 The components of a user's identity can change over time, and it is important to keep track of these
 changes so that they are auditable. For this purpose, we introduce a data structure called a signed
@@ -79,7 +78,8 @@ are added, and are able to revoke devices that are lost, stolen, or no longer us
 \subsection{Displaying Identity}
 \label{subsec:displayid}
 
-\textbf{Note:} Displaying cloud identifiers is not currently available. We plan to release it in future updates.
+\textbf{Note:} Displaying cloud identifiers is not currently available. We plan to release it in
+future updates.
 
 This section describes how we could display the identity of a Zoom user to others in various
 products. Because cryptographic keys are not easy to read, compare, or keep track of, we only show
@@ -87,12 +87,12 @@ human-readable identifiers in the user interface. A user's set of identifiers co
 components:
 
 \begin{enumerate}
-\item A Cloud Identifier, which represents the cloud infrastructure a user's
-information is hosted on (omitted if the user is on the Zoom commercial cloud)
-\item An Account Domain Name (ADN), which identifies the account that the user
-is part of, where applicable. Before the ZTT (Section~\ref{sec:ztt}) is
-deployed, the ADN will only be displayed for users whose identities are vouched
-for by a trusted third-party IDP (Section~\ref{sec:idpattestations}).
+\item A Cloud Identifier, which represents the cloud infrastructure a user's information is hosted
+on (omitted if the user is on the Zoom commercial cloud)
+\item An Account Domain Name (ADN), which identifies the account that the user is part of, where
+applicable. Before the ZTT (Section~\ref{sec:ztt}) is deployed, the ADN will only be displayed for
+users whose identities are vouched for by a trusted third-party IDP
+(Section~\ref{sec:idpattestations}).
 \item
     An email address, which can be used to distinguish individual users within the account
 \end{enumerate}
@@ -105,7 +105,7 @@ John Smith \\
 
 \columnbreak
 
-The display name, ``John Smith," is freely chosen and not authenticated. \texttt{example.com} is the
+The display name, ``John Smith,'' is freely chosen and not authenticated. \texttt{example.com} is the
 ADN\@. Note that the email domain, \texttt{example.net}, can differ from the ADN\@.
 \end{multicols}
 
@@ -160,17 +160,15 @@ Name (ADN). Domain names make good identifiers because they are unique (while fo
 companies with the same name might exist in two countries), and many users are already familiar with
 them.
 
-To set the ADN, an account administrator may choose one of the account's Associated Domains. 
-Associated Domains is a Zoom feature where an account admin can prove ownership 
-of domain names (e.g. by adding a specific DNS record, adding a header tag 
-to the home page, or hosting a file at a specific location on the domain) for the 
-purposes of account and user management. Domain names consist of
-alphanumeric characters and hyphens. 
+To set the ADN, an account administrator may choose one of the account's Associated Domains.
+Associated Domains is a Zoom feature where an account admin can prove ownership of domain names
+(e.g. by adding a specific DNS record, adding a header tag to the home page, or hosting a file at a
+specific location on the domain) for the purposes of account and user management. Domain names
+consist of alphanumeric characters and hyphens. 
 
-Only a single account at a time can use a domain name as their ADN. Account
-administrators are allowed to change their ADN if needed. In the future, Zoom
-may provide a new dedicated subdomain as an option for accounts to use as the
-ADN.
+Only a single account at a time can use a domain name as their ADN. Account administrators are
+allowed to change their ADN if needed. In the future, Zoom may provide a new dedicated subdomain as
+an option for accounts to use as the ADN.
 
 \subsubsection{Identifying Users}
 
@@ -235,7 +233,7 @@ indicate that all of her other devices are trusted, so Bob (who trusts the publi
 work laptop) can use the signed $\batchapprove{}$ statement to extend his trust to Alice's new
 mobile phone's key.
 
-$\batchapprove{}$ links induce a trust graph over a user's set of devices, where each device
+$\batchapprove{}$ operations induce a trust graph over a user's set of devices, where each device
 represents a node and each $\batchapprove{}$ adds an edge from the device performing the approval to
 all non-revoked devices introduced after that device. We call each connected component in this graph
 an \textit{approval class}, and we assume devices in the same approval class trust each other. When
@@ -301,9 +299,11 @@ Figure~\ref{fig:devices} summarizes Bob's trust graph after these steps.
 \label{fig:devices}
 \end{figure}
 
-\subsubsection{Per-User Keys}\label{subsubsec:puks} One application of the trust graph is to
-facilitate \textit{per-user keys} (PUKs): a set of keys shared between all of a user's devices,
-rotated on device addition or revocation.
+\subsubsection{Per-User Keys}
+\label{subsubsec:puks}
+
+One application of the trust graph is to facilitate \textit{per-user keys} (PUKs): a set of keys
+shared between all of a user's devices, rotated on device addition or revocation.
 
 In each $\deviceadd{}$ or $\devicerevoke{}$ operation, devices generate a new PUK seed. The PUK seed
 is encrypted for each unrevoked device's device key: devices implicitly trust all older devices
@@ -372,6 +372,110 @@ authentication tokens and signatures using the keys the device owns. This is not
 guarantee and relies on the server's honesty, and also does not cover any content already in the
 device's memory before revocation.
 
+\subsubsection{Backup Keys}
+\label{subsubsec:backupkeys}
+
+In addition to their physical devices, a user can add so-called ``virtual devices'' to their
+sigchain. Virtual devices also have signing and encryption key pairs associated with them, but
+instead of strictly corresponding to the physical device that generated them, these keys may be
+exported or communicated to other parties and are used to provide additional functionality. Virtual
+devices are treated like physical ones: they can be added and removed from the user's device list,
+other devices encrypt PUKs for them, and the corresponding private keys can be used to approve other
+devices or rotate PUKs.  
+
+A backup key is a string of letters and digits which the user can write down on paper. By entering
+the string on a new device, the user can decrypt and recover their encrypted data if all other
+existing physical devices become unavailable.
+
+Backup keys can be generated by one of the user's existing devices. Note that the backup key can
+have at most the PUK access of the generating device. Backup keys are added to a user's device list
+using a $\deviceaddandapprove{}$ operation (which combines $\deviceadd{}$ and $\batchapprove{}$, as
+described above).
+
+The device generates a high entropy string, which is displayed as a sequence of letters and digits,
+such as
+%
+\[ \texttt{ZR30 4D11 5HJM RJG2 6H75 78DH B0VS 4KSF}. \] 
+%
+The first four characters are used as a key identifier and are not considered private. Backup keys
+have at least 128 bits of private entropy, as well as built-in error correction to tolerate small
+copy-pasting mistakes. The backup key string is used to derive a seed using
+sodium{}'s~\cite{libsodium} \texttt{argon2id}, which is then used to derive the device's signing and
+encryption keys.
+
+Assume a user provisions a new device and does not have access to any of their previous physical
+devices (either temporarily or permanently). The user can enter a backup key on this new device to
+recover all the data available to the backup key: the new device will use the backup key to
+re-derive the signing and encryption key corresponding to the virtual backup device and then perform
+a $\batchapprove{}$ operation. In particular, the backup encryption key can be used to encrypt all
+the PUKs that the backup device had access to for the current device's key.
+
+\subsubsection{Escrow Keys}
+\label{subsubsec:escrowkeys}
+\emph{Escrow} (see Section~\ref{subsec:keyescrow}) allows accounts to designate some of their
+members as \emph{Escrow Administrators (EAs)}, who can access other account members'
+(\emph{escrowees'}) encrypted data in order to support features like legal discovery, retention, and
+accidental loss prevention\footnote{Some companies are required by law to keep records of all their
+communications, and make them available to law enforcement when requested. In addition, employees'
+devices might get lost, stolen or otherwise unavailable.}. To support these use cases, an account
+can enable escrow, which prompts each account member with an unskippable notification to add a
+virtual device to their device list, the \emph{escrow device}, whose secret keys are encrypted for
+the EAs.
+
+The escrowee (or potentially one of their account's EAs) can rotate their escrow device's key (and
+therefore concurrently rotate their PUK) whenever one of the EAs' devices with access to the
+escrowee's keys is revoked (see Section~\ref{subsubsec:escrowmgmt}).
+
+\subsubsection{Lockdown Mode}
+\label{subsubsec:lockdownmode}
+\textbf{Note:} As of version 5.15.10, lockdown mode is only available (and required) for EAs (see
+Section~\ref{subsubsec:escrowadmins}).
+
+As detailed in Section~\ref{subsec:multidev}, a standard user can add new devices at any time, and
+start using them immediately (except for accessing previously encrypted data) without approval from
+previous devices. This allows newly added unapproved devices to immediately start using E2EE Zoom
+products to send encrypted data on behalf of the user, while not granting it access to previously
+encrypted data until a previous device comes online to approve it. While this device model may be
+appropriate for most users, some users may benefit from additional security guarantees, namely that
+new devices cannot be used without the consent of an existing device. This prevents a compromised
+server or an attacker who learns the user's password from adding a device and impersonating the user
+without prior user approval%
+%
+\footnote{ Note that compromising the server would allow an attacker to temporarily reassign a
+user's email identifier to a user whose keys are controlled by the attacker, thus circumventing the
+need for prior approval for impersonation even if lockdown mode is enabled. This attack would still
+be detectable after the fact, and currently is not applicable: only EA sigchains can enable lockdown
+mode, and they do not have email identifiers.}%
+%
+(though imposing additional usability burden on the user).
+
+Lockdown mode can be enabled or disabled for the user from a user's device in the oldest non-empty
+approval class. When in lockdown mode, new devices can be added, but are not permitted to rotate the
+PUK or approve new devices on behalf of the user until they are themselves approved by a device in
+the oldest class (and thus join that class). We refer to these new devices as \textit{unconfirmed},
+and older devices in the oldest class as \textit{confirmed}.
+
+If a confirmed device revokes an unconfirmed device, no key rotations are needed (as the revoked
+device did not have access to any PUKs). If a confirmed device approves an unconfirmed device, the
+existing PUK is encrypted for the newly confirmed device, again without rotations. The PUK is only
+rotated if a confirmed device revokes another confirmed device, including itself (although in the
+self-revoke case, the rotation will be performed by another confirmed device once it comes online).
+Unconfirmed devices are allowed to perform revocations of any device, but other clients will not
+accept any PUK rotations performed by unconfirmed devices while the user is in lockdown mode.
+
+Lockdown mode reduces the number of necessary key rotations, in addition to preventing a compromised
+server from impersonating a user. On the other hand, the user will need to have access to at least
+one confirmed device in order to add and use new devices. If the user loses or revokes all of their
+devices, then data encrypted for their user will unrecoverable, and their account will be
+essentially unusable.
+
+The ``locked out'' user would have to create a new user account (note that Zoom allows email
+addresses to be re-assigned). To reduce the likelihood of this ``locked out '' scenario, the Zoom
+server requires users to create a backup key (see Section~\ref{subsubsec:backupkeys}) before
+entering lockdown mode. The server enforces that users in lockdown mode have at least one unrevoked
+device. One exception to this is that if an account disables escrow, the server will revoke all
+devices belonging to the account's EA.
+
 \input{sigchains}
 
 \subsection{Client Key Management}
@@ -389,14 +493,22 @@ Long-term device keys are stored in the local operating system's keychain (where
 with some added protection for two Zoom users using the same OS account.
 %
 Before storing keys in the local OS-provided keychain, we encrypt them using a key-wrapping key
-stored by the server and specific to each user and each device.
+stored by the server and specific to each user and each device. 
 %
 When a user revokes their device, they will delete the keychain entry and the server will delete the
 corresponding key. This also guarantees that keys cannot be recovered from a backup of a device that
 has since been revoked.
 %
 If two users are using the same computer, the key-wrapping key prevents one user from being able to
-access the other's keys.
+access the other's keys. 
+
+One exception are keys corresponding to devices on the EA sigchain (see
+Section~\ref{subsubsec:escrowadmins}). These keys are also stored in the OS keychain, but they are
+encrypted using a key-wrapping key which is unique to each EA sigchain and each device. The server
+will only provide this key-wrapping key to users with EA permissions (see
+Section~\ref{subsubsec:escrowadminperm}). This allows two EAs in the same account sharing the same
+device to use the same EA device key, which therefore only needs to be provisioned (and approved)
+once.
 
 We use the committing AEAD scheme $\mathsf{CtE1}$~\cite{messagefranking} to prevent the server from
 supplying malicious key-wrapping keys.
@@ -423,6 +535,7 @@ device (for example, by colluding with another user using the same device). It w
 different users of the same device from installing malware to steal the other user's keys.
 
 \subsubsection{Device Management Interface}
+\label{subsubsec:devicemgmt}
 
 We offer a dedicated UI to manage devices that are part of the user's sigchain, available in the
 Zoom client's settings. Upon visiting this device list, clients ask the Zoom server for the latest
@@ -453,6 +566,7 @@ Once the Zoom Transparency Tree (Section~\ref{sec:ztt}) is deployed, Zoom server
 not have the ability to, e.g., suppress notifications in order to hide a malicious device addition
 or email change.
 
+\input{escrow}
 \input{contact_sync}
 \input{realtime}
 
@@ -468,16 +582,19 @@ the device's memory or storage): secret keys never leave the device,\footnote{Ex
 the user voluntarily sends crash reports to Zoom. We try to minimize this risk, but cannot exclude
 it.} and are only used to perform encryption and signing. A consequence is that
 ciphertexts/signatures for/by each of the device keys can only be decrypted/created by the device
-that generated these keys. An exception is backup keys, which are shown once to the user as text
-strings that can be written down and sometimes sent to the user's account administrators as an
-escrow mechanism (after the user receives notice). In this case, our guarantees depend on these
-keys being kept securely by the user and their administrator, and not being available to an
-attacker.
+that generated these keys. Virtual device keys are an exception. For example, backup keys are shown
+once to the user as text strings that can be written down, and therefore our guarantees depend on
+these keys being kept securely by the user, and not being available to an attacker. A second
+exception is escrow keys, where the escrow device secret key is possibly generated by one of the
+user's own devices and encrypted for the account's escrow admin's PUK: this gives the EA's devices
+the same access to the user's keys as the user's own devices.
 
 Similarly, consider any valid user sigchain. The secret keys corresponding to any per-user public
 key that appears in that sigchain are only known to any devices that were added but not revoked
 before the per-user key was added to that sigchain, plus any devices that were added afterwards and
-approved by one of those devices (as recorded in each device's own view of the user's sigchain).
+approved by one of those devices (as recorded in each device's own view of the user's sigchain). If
+escrow is enabled or the user creates backup keys, some EA devices and those with access to the
+backup keys might also learn these PUKs.
 
 Also, note that the Zoom server cannot force any devices to forget identity updates like device
 revocations: when receiving sigchains, devices only accept new sigchain links that extend the ones
@@ -487,48 +604,56 @@ they are already aware of.
 These properties allow us to obtain strong guarantees about the confidentiality of the data that is
 encrypted for a user's device keys and PUKs. For example, consider any ciphertext (such as an email
 draft) encrypted for a given per-user key whose secret key is only known to a set of uncompromised
-devices controlled by the corresponding user. In order to obtain the plaintext, an adversary (even
-an insider) would have to either break the encryption scheme, compromise one of the user's current
-devices or backup keys, or trick the user into using one of their devices to
-approve a maliciously-controlled device (so that the existing device encrypts
-the PUK secrets for the malicious one). A cautious user would only approve an
-additional device on their sigchain in a situation where they
-expect such a request: for example, after they sign in on Zoom for the first time on a new device.
-An insider could take this as an opportunity to attempt a MitM attack, by lying about the new
-device's public key to the old device. However, outsiders cannot perform this attack: even if the
-attacker had access to the user's credentials, the attacker would have to add an extra additional
-device and cannot replace the old one from the approval modal. Comparing the sigchain fingerprints
-as known to the approving device and the new device before confirming approval also prevents
-insiders from performing this attack. Because the sigchain is an append-only data structure,
-comparing fingerprints after approval would still allow the user to detect the attack, providing
-evidence of server compromise/misbehavior and allowing the user to mitigate its effects.
+devices controlled by the corresponding user (and the users who have permissions to manage the
+escrow admin virtual user, if escrow is enabled). In order to obtain the plaintext, an adversary
+(even an insider) would have to either break the encryption scheme, compromise one of the user's (or
+escrow admin's) current devices or backup keys, or trick the user into using one of their devices to
+approve a maliciously-controlled device (so that the existing device encrypts the PUK secrets for
+the malicious one). If escrow is enabled, an adversary could also compromise one of the escrow
+admin's device keys, or a malicious insider could trick the escrow admin user into approving a
+maliciously-controlled device.
 
-In the future, the Zoom Transparency Tree will offer (assuming trusted auditors) an automated and transparent way to
-ensure that devices have a consistent view of all sigchains and public keys such that checking
-fingerprints before device approvals will no longer be critical.
+A cautious user would only approve an additional device on their sigchain in a situation where they
+expect such a request: for example, after they sign in on Zoom for the first time on a new device,
+or in the case of enabling escrow, after they receive a trustworthy notice from their account
+administrator that escrow is being enabled. An insider could take this as an opportunity to attempt
+a MitM attack, by lying about the new device's public key to the old device. However, outsiders
+cannot perform this attack: even if the attacker had access to the user's credentials, the attacker
+would have to add an extra additional device and cannot prevent the legitimate one from appearing in
+the approval modal. Comparing the sigchain fingerprints as known to the approving device and the new
+device before confirming approval (and comparing the EA's fingerprint before adding or approving the
+virtual escrow device) also prevents insiders from performing this attack. Because the sigchain is
+an append-only data structure, comparing fingerprints after approval would still allow the user to
+detect the attack, providing evidence of server compromise/misbehavior and allowing the user to
+mitigate its effects.
+
+In the future, the Zoom Transparency Tree will offer (assuming trusted auditors) an automated and
+transparent way to ensure that devices have a consistent view of all sigchains and public keys such
+that checking fingerprints before device approvals will no longer be critical.
 
 \subsubsection{MitM Between Different Users}
 Another class of attacks involves an MitM between the sender and recipient of an encrypted
 communication. An insider might lie to the sender about the recipient's sigchain and PUKs or add a
 malicious device to the recipient's sigchain, causing the sender to encrypt for a key controlled by
-the attacker. These attacks can be prevented or detected by checking fingerprints, and can in many cases
-be detected after-the-fact with minimal user burden by leveraging the ZTT.
+the attacker. These attacks can be prevented or detected by checking fingerprints, and can in many
+cases be detected after-the-fact with minimal user burden by leveraging the ZTT.
 
-Consider an adversary compromising one of the recipient's devices or backup keys, thus obtaining their
-secrets. With access to the device, an attacker could obtain all of the recipient's data, both locally cached
-and stored by the server (at least until their session expires). If the user discovers the
-compromise, they could revoke this device and rotate their keys, preventing further data leakage.
-However, if the attacker also compromises (even at a later point) the Zoom server infrastructure,
-they might attempt a more subtle attack: when a sender requests this recipient's sigchain, the
-server could provide a legitimate but stale version of this chain, i.e., one that does not include
-the device revocation and the subsequent rotation. This attack can be prevented by
-comparing fingerprints. However, detecting this compromise using fingerprints is not that
-straightforward: the sender and recipient would have to ensure that they agree on their views of the recipient's sigchain at the time the \emph{message was encrypted and sent}, rather than at the time of the
-fingerprint comparison. Assuming all clients have synchronized clocks, one way to achieve this would be
-to have each sigchain link include a timestamp. Each client would remember the last time
-they updated their view of any sigchain and refuse to accept new links for that sigchain that have an
-earlier timestamp. In order to be tolerant to time misconfigurations, we currently do not enforce
-these properties, but we are considering them for future updates.
+Consider an adversary compromising one of the recipient's devices or backup keys, thus obtaining
+their secrets. With access to the device, an attacker could obtain all the recipient's data, both
+locally cached and stored by the server (at least until their session expires). If the user
+discovers the compromise, they could revoke this device and rotate their keys, preventing further
+data leakage. However, if the attacker also compromises (even at a later point) the Zoom server
+infrastructure, they might attempt a more subtle attack: when a sender requests this recipient's
+sigchain, the server could provide a legitimate but stale version of this chain, i.e., one that does
+not include the device revocation and the subsequent rotation. This attack can be prevented by
+comparing fingerprints. However, detecting this compromise using fingerprints after the fact is not
+that straightforward: the sender and recipient would have to ensure that they agree on their views
+of the recipient's sigchain at the time the \emph{message was encrypted and sent}, rather than at
+the time of the fingerprint comparison. Assuming all clients have synchronized clocks, one way to
+achieve this would be to have each sigchain link include a timestamp. Each client would remember the
+last time they updated their view of any sigchain and refuse to accept new links for that sigchain
+that have an earlier timestamp. In order to be tolerant to time misconfigurations, we currently do
+not enforce these properties, but we are considering them for future updates.
 
 Eventually, the ZTT might also ensure, under similar time synchronization assumptions, that
 everyone's view of all sigchains is not only consistent, but also relatively up-to-date, i.e.\ that
@@ -536,17 +661,16 @@ any attempt to withhold updates beyond some reasonable tolerance bound is detect
 that the server is not able to trick senders into encrypting for out-of-date keys unnoticed.
 
 \subsubsection{Integrity}
-Ensuring that all devices have a consistent view of a user's sigchain and that no
-extraneous devices have been added to it (by comparing fingerprints or
-relying on the ZTT and monitoring one's own sigchain) also helps with integrity
-guarantees. Users can ensure communications haven't been tampered with by
-checking that they are signed by devices belonging to the claimed author. However, as above, in some
-cases the evidence of compromise might be less conclusive: if the sender signs a message using a
-device's signing key, and later revokes that device (for example, because the device was lost or
-compromised), the recipient has no way to tell if the message was signed before or after the
-revocation/compromise. The user interface may communicate this potential risk to the recipient so
-that they can confirm the integrity of any sensitive communications with the sender out-of-band, or
-ask them to resend the message with an up-to-date key.
+Ensuring that all devices have a consistent view of a user's sigchain and that no extraneous devices
+have been added to it (by comparing fingerprints or relying on the ZTT and monitoring one's own
+sigchain) also helps with integrity guarantees. Users can ensure communications haven't been
+tampered with by checking that they are signed by devices belonging to the claimed author. However,
+as above, in some cases the evidence of compromise might be less conclusive: if the sender signs a
+message using a device's signing key, and later revokes that device (for example, because the device
+was lost or compromised), the recipient has no way to tell if the message was signed before or after
+the revocation/compromise. The user interface may communicate this potential risk to the recipient
+so that they can confirm the integrity of any sensitive communications with the sender out-of-band,
+or ask them to resend the message with an up-to-date key.
 
 \subsubsection{Security Limitations}
 
@@ -558,7 +682,7 @@ whether by stealing the user's credentials or compelling the server, will be abl
 is E2E-encrypted to the targeted user after the compromise (but not before, as explained above), as
 it will be able to add a new compromised PUK to the user's chain, which might be used by other users
 to encrypt messages intended for the recipient before the recipient has had a chance to come online
-to review and revoke the new device. This attack can also be prevented if the sending user compares
+to review and revoke the new device. This attack can be prevented if the sending user compares
 fingerprints out-of-band with the potentially compromised recipient(s) before encrypting for the new
 PUKs, or detected by comparing fingerprints (possibly implicitly through the ZTT) after the fact.
 
@@ -568,13 +692,21 @@ online, they will pick new encryption key pairs, publish the public keys in a ne
 encrypt the secret portions for all the user's devices that are still active. If one of the user's
 devices is revoking another one, key rotation can happen immediately. However, in case of
 self-revocation or revocation from the web or by an account administrator, if none of the other
-user's devices are online, this rotation might be delayed. Any data encrypted to this user during
-this period would be using an encryption key known to a revoked device, and we rely on the server to
-enforce that the revoked device can no longer access user data. An attacker who both compromised a
-revoked device \textit{and} had read access to the server might thus be able to decrypt this data.
-Although the attack window seems limited and hard to exploit in practice, this is a limitation of
-the current design. Similarly, when a key is revoked and rotated out, we do not re-encrypt old
-ciphertexts for the new key, and rely on the server for access control to the ciphertexts.
+user's devices are online, this rotation might be delayed. A delay can also happen if escrow is
+disabled, or the user is moved between accounts (with different escrow administrators) while being
+offline. Any data encrypted to this user during this period would be using an encryption key known
+to a revoked device (or to old escrow administrators' devices), and we rely on the server to enforce
+that these devices can no longer access user data. An attacker who both compromised a revoked (or
+escrow administrator's) device \textit{and} had read access to the server might thus be able to
+decrypt this data. Although the attack window seems limited and hard to exploit in practice, this is
+a limitation of the current design. Similarly, when a key is revoked and rotated out, we do not
+re-encrypt old ciphertexts for the new key, and rely on the server for access control to the
+ciphertexts.
+
+We stress that, while escrow enables necessary enterprise features such as account recovery and data
+retention, EAs' devices have keys that allow them to decrypt all data in their account: as such,
+this privilege should be restricted to a few security conscious users to minimize the potential for
+compromise.
 
 \subsubsection{Privacy Limitations}
 
@@ -586,11 +718,11 @@ any specific E2E-encrypted communication. Similarly, the number of times that a 
 email address or account is visible (but not the previous emails or account IDs). Moreover, since
 the server might report the timestamps of sigchain statements (and, once deployed, the ZTT will also
 necessarily reveal the same information), time correlations between different statements might be
-exploited to infer, for example, that two users swapped their email addresses. While this
-information is not displayed in the user interface, the client needs this data to perform the
-sigchain validation and therefore a motivated attacker might extract such information. We believe
-that this is acceptable; it is similar to the security code change warnings in applications like
-Signal and WhatsApp.
+exploited to infer, for example, that two users swapped their email addresses, or that two users are
+in the same account. While this information is not displayed in the user interface, the client needs
+this data to perform the sigchain validation and therefore a motivated attacker might extract such
+information. We believe that this is acceptable; it is similar to the security code change warnings
+in applications like Signal and WhatsApp.
 
 Note that sigchains are not publicly available and are subject to server-side access control: they
 are provided as needed to users. For example, if Bob is a Zoom Mail Service user and knows Alice's

@@ -1,6 +1,14 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+
+## [v4.2] - 2023-08-21
+### Added
+- Description of account escrow using escrow admin users and escrow devices.
+### Removed
+- Escrow using backup keys is removed, now that account escrow is available.
+
+
 ## [v4.1] - 2023-03-27
 ### Added
 - Description of "Okta Authentication for End-to-End Encryption", which supports Okta IDP attestations for E2EE Meetings 
