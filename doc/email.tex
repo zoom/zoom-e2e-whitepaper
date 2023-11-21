@@ -9,12 +9,18 @@ a fragmented ecosystem, and frequent security vulnerabilities.}
 and the desire to leverage the strong identity properties and the multi-device key management
 architecture described in the rest of this document, we only offer end-to-end encryption for emails
 sent between two Zoom Mail Service users (who have provisioned their clients to generate the
-required keys). Emails from external providers are encrypted at rest with client-controlled per-user keys as
-soon as possible after they are received, and the server deletes any unencrypted copy of emails to
-external providers after they are successfully processed.
+required keys). Emails from external providers are encrypted at rest with client-controlled per-user
+keys as soon as possible after they are received, and the server deletes any unencrypted copy of
+emails to external providers after they are successfully processed.
 
-Zoom Mail Client also supports external email providers, but here we only analyze the
-security of the product when leveraging our own Zoom Mail Service.
+Whether emails between active Zoom Mail Service users are end-to-end encrypted or not depends on a
+variety of factors, such as whether the sender and receiver have already generated encryption keys,
+whether they are running the latest Zoom client version, as well as the configuration of user or
+account level settings. The user interface will always indicate whether the email a user is about to
+send will be end-to-end encrypted or not.
+
+Zoom Mail Client also supports external email providers, but here we only analyze the security of
+the product when leveraging our own Zoom Mail Service.
 
 \textbf{Note:} Implementing end-to-end encryption in Zoom Mail Service is an ongoing process, and
 not all planned features and functionality in our design will be available as of version 5.12.8.
@@ -65,19 +71,17 @@ produce the BCC commitment.
 email PUK (a public per-user Curve25519 key advertised in the recipient's sigchain, derived as
 described in Section~\ref{subsubsec:puks}). Compute a Diffie-Hellman shared secret between this key
 and the ephemeral sender private key.
-\item Using SHA-256, hash the following information into the
-\textbf{recipient-associated digest}: all user IDs and public keys used by the
-sender and recipient, the hash of the manifest ciphertext, the BCC commitment,
-and other context such as the version number. The BCC commitment is
-only used by the sender to verify and display the BCC header string in their own outbox.
+\item Using SHA-256, hash the following information into the \textbf{recipient-associated digest}:
+all user IDs and public keys used by the sender and recipient, the hash of the manifest ciphertext,
+the BCC commitment, and other context such as the version number. The BCC commitment is only used by
+the sender to verify and display the BCC header string in their own outbox.
 \item If the sender is a Zoom Mail Service user, then using Ed25519, sign this hash with the
 sender's private device signing key. (If the Zoom server is encrypting an email, omit this
 signature.)
 \item Using \HMACSHATWO, derive a key from the recipient-associated digest and the Diffie-Hellman
 shared secret.
 \item Using XChaCha20-Poly1305 with this key, encrypt the shared symmetric key and, if it exists,
-the signature over the recipient-associated digest to produce a \textbf{recipient box
-ciphertext}.
+the signature over the recipient-associated digest to produce a \textbf{recipient box ciphertext}.
 \end{enumerate}
 \item Sign the list of recipient-associated digests (including BCC recipients) with the sender's
 private device signing key to produce the recipient list signature. The recipient list signature is
@@ -122,14 +126,13 @@ example, the sender might have sent this specific email from a different email s
 migrating their address to Zoom Mail Service. Such emails are indicated as not E2E-encrypted.)
 \item If the email being viewed was sent by the current user, assert that the BCC header string, the
 BCC commitment key, and the recipient list signature are all present. Verify the commitment, then
-recompute all recipient-associated digests and verify the signature. The BCC header and
-recipient list are now trusted and can be displayed in the UI.
-\item Independently compute the recipient-associated digest and the Diffie-Hellman share between
-the recipient's key and the sender's ephemeral public key. Using that hash and share, derive the key
-to decrypt the recipient box ciphertext and get the signature over the
-recipient-associated digest and shared symmetric key. Verify the signature.
-\item Using the shared symmetric key, decrypt the manifest ciphertext to get a
-list of piece keys
+recompute all recipient-associated digests and verify the signature. The BCC header and recipient
+list are now trusted and can be displayed in the UI.
+\item Independently compute the recipient-associated digest and the Diffie-Hellman share between the
+recipient's key and the sender's ephemeral public key. Using that hash and share, derive the key to
+decrypt the recipient box ciphertext and get the signature over the recipient-associated digest and
+shared symmetric key. Verify the signature.
+\item Using the shared symmetric key, decrypt the manifest ciphertext to get a list of piece keys
 and piece ciphertext hashes.
 \item On demand, fetch each piece ciphertext, verify its hash, and decrypt it with its piece key.
 \end{enumerate}
@@ -171,31 +174,32 @@ When sending an email that includes external recipients, clients flag the email 
 share a decryption key with the server, as described earlier. The server uses this key to decrypt
 the email and relay it to the external recipient using standard email protocols.
 
-We also offer password-protected (sometimes called ``expiring'' or ``access restricted'') emails as a more secure option
-when emailing external recipients. The client freshly samples a high-entropy key (which we call a password), then
-creates an additional recipient box by encrypting the shared symmetric key for that password. Both the ciphertext
-and the password are sent to the server.
+We also offer password-protected (sometimes called ``expiring'' or ``access restricted'') emails as
+a more secure option when emailing external recipients. The client freshly samples a high-entropy
+key (which we call a password), then creates an additional recipient box by encrypting the shared
+symmetric key for that password. Both the ciphertext and the password are sent to the server.
 
-In lieu of the plaintext email contents, Zoom Mail Service sends a link to a
-Zoom-hosted web page to the recipient. The fragment\footnote{The fragment of a link is the part after
-the \texttt{\#}, which is not sent to the server when the user visits the
-link.} component of the link contains both the password and the recipient-associated digest (Section \ref{subsec:emailprotocol}). After sending the email to the recipient, Zoom Mail Service erases the password from its memory and storage.
+In lieu of the plaintext email contents, Zoom Mail Service sends a link to a Zoom-hosted web page to
+the recipient. The fragment\footnote{The fragment of a link is the part after the \texttt{\#}, which
+is not sent to the server when the user visits the link.} component of the link contains both the
+password and the recipient-associated digest (Section \ref{subsec:emailprotocol}). After sending the
+email to the recipient, Zoom Mail Service erases the password from its memory and storage.
 
-When the recipient's browser visits the link, the JavaScript on the web
-page validates the provided ciphertext against the recipient-associated digest, then
-decrypts the email client-side using the password.
-Neither the password nor the plaintext email contents are sent back to the Zoom
-servers. 
+When the recipient's browser visits the link, the JavaScript on the web page validates the provided
+ciphertext against the recipient-associated digest, then decrypts the email client-side using the
+password. Neither the password nor the plaintext email contents are sent back to the Zoom servers. 
 
-Additionally, senders set an expiration time after which password-protected emails are automatically deleted by the Zoom server.
+Additionally, senders set an expiration time after which password-protected emails are automatically
+deleted by the Zoom server.
 
-Password-protected emails offer several security benefits. The recipient's (and any intermediate) email servers never process email contents directly, limiting exposure, and all requests to visit the link can be logged by Zoom.
-If the Zoom server's storage is compromised after it sends such an email and deletes the
-password, the email ciphertext remains undecryptable. This does not rule out an active attack where
-a compromised server waits for the recipient to visit the link and serves them malicious JavaScript
-to obtain the password. However, this attack could only happen before the email expires and the
-ciphertext itself is deleted. We consider this an acceptable tradeoff given the convenience it
-provides to the recipient, who is not required to install additional software.
+Password-protected emails offer several security benefits. The recipient's (and any intermediate)
+email servers never process email contents directly, limiting exposure, and all requests to visit
+the link can be logged by Zoom. If the Zoom server's storage is compromised after it sends such an
+email and deletes the password, the email ciphertext remains undecryptable. This does not rule out
+an active attack where a compromised server waits for the recipient to visit the link and serves
+them malicious JavaScript to obtain the password. However, this attack could only happen before the
+email expires and the ciphertext itself is deleted. We consider this an acceptable tradeoff given
+the convenience it provides to the recipient, who is not required to install additional software.
 
 \subsection{Mailing Lists}
 
@@ -215,8 +219,8 @@ as such in the UI.
 \subsection{Encrypting Non-Email Data}
 
 Zoom Mail Service users can also have sensitive information in their user accounts that don't
-directly correspond to any email they sent or received. These include custom labels, folder names, and
-email signatures. The Zoom Mail Client encrypts all of this information for the user's own most
+directly correspond to any email they sent or received. These include custom labels, folder names,
+and email signatures. The Zoom Mail Client encrypts all of this information for the user's own most
 recent email PUK, but the server still learns metadata such as the fact that two emails are in the
 same folder.
 
@@ -235,39 +239,40 @@ whether two emails share the same attachment. Moreover, in future releases user 
 potentially inappropriate content may share decrypted email content with Zoom servers, though this
 functionality is not available as of version 5.12.8.
 
-The email encryption format is key-committing (each ciphertext, even if maliciously generated, can only
-be decrypted to a single plaintext) and guarantees both confidentiality and integrity, assuming the
-key material is kept private and correctly authenticated. Guarantees related to keys are inherited
-from the underlying key management architecture, as detailed in Section~\ref{sec:IdKmProps} (with
-the caveats below). For example, an attacker with read-only access to the Zoom server infrastructure
-and without access to any of the recipient's devices cannot violate the confidentiality of E2EE
-email contents, or of non-E2EE emails whose processing has been completed (i.e.\ that have been sent
-out\footnote{Here we are only considering attacks to the Zoom infrastructure, excluding attacks to
-the external recipient's email account or on the mail delivery infrastructure beyond Zoom servers.}
-or encrypted for the recipient's keys) before the compromise began.
+The email encryption format is key-committing (each ciphertext, even if maliciously generated, can
+only be decrypted to a single plaintext) and guarantees both confidentiality and integrity, assuming
+the key material is kept private and correctly authenticated. Guarantees related to keys are
+inherited from the underlying key management architecture, as detailed in
+Section~\ref{sec:IdKmProps} (with the caveats below). For example, an attacker with read-only access
+to the Zoom server infrastructure and without access to any of the recipient's devices cannot
+violate the confidentiality of E2EE email contents, or of non-E2EE emails whose processing has been
+completed (i.e.\ that have been sent out\footnote{Here we are only considering attacks to the Zoom
+infrastructure, excluding attacks to the external recipient's email account or on the mail delivery
+infrastructure beyond Zoom servers.} or encrypted for the recipient's keys) before the compromise
+began.
 
-The user interface around fingerprints is still under active development (as of
-version 5.12.8, the product is still in beta). The current release only offers partial detection and prevention
-mechanisms against active attacks, which we are working to strengthen in the very near future.
-There is currently no way to mark that a fingerprint has been verified
-out-of-band so that the user gets notified when the corresponding sigchain changes. The guarantee
-that we offer is the following. Assume a user looks at a recipient's fingerprint (by hovering on
-their name/email address) while in the compose window, and then hits ``Send'' \textbf{without
-closing the compose window between the two operations}. If so, the client enforces that the email
-will be encrypted using the latest email PUK that is part of the sigchain corresponding to the recipient fingerprint that the user
-saw. If the sigchain is updated before the user hits the ``Send'' button, the send operation will
-fail so that the user has the opportunity to check the updated fingerprint. We stress that this
-mechanism does not work if the user closes the window between seeing the fingerprint and sending the
-email, which may occur when continuing composing from a draft, or across different emails sent to
-the same recipient. We deem this an acceptable temporary solution until we are able to offer
-comprehensive support for remembering ``trusted'' fingerprints and notifications of fingerprint
-changes. We will continue to develop a more robust and feature-rich experience around fingerprints
-and change notifications, as well as more automated solutions such as those involving the ZTT to
-reduce the burden on the user.
+The user interface around fingerprints is still under active development (as of version 5.12.8, the
+product is still in beta). The current release only offers partial detection and prevention
+mechanisms against active attacks, which we are working to strengthen in the very near future. There
+is currently no way to mark that a fingerprint has been verified out-of-band so that the user gets
+notified when the corresponding sigchain changes. The guarantee that we offer is the following.
+Assume a user looks at a recipient's fingerprint (by hovering on their name/email address) while in
+the compose window, and then hits ``Send'' \textbf{without closing the compose window between the
+two operations}. If so, the client enforces that the email will be encrypted using the latest email
+PUK that is part of the sigchain corresponding to the recipient fingerprint that the user saw. If
+the sigchain is updated before the user hits the ``Send'' button, the send operation will fail so
+that the user has the opportunity to check the updated fingerprint. We stress that this mechanism
+does not work if the user closes the window between seeing the fingerprint and sending the email,
+which may occur when continuing composing from a draft, or across different emails sent to the same
+recipient. We deem this an acceptable temporary solution until we are able to offer comprehensive
+support for remembering ``trusted'' fingerprints and notifications of fingerprint changes. We will
+continue to develop a more robust and feature-rich experience around fingerprints and change
+notifications, as well as more automated solutions such as those involving the ZTT to reduce the
+burden on the user.
 
-Lastly, while it is possible for the sender to check a recipient's fingerprint before
-sending, there is currently no intuitive way for recipients to check the fingerprint of the sender
-of a given email to verify the claimed authorship. Support for this use case is also upcoming.
+Lastly, while it is possible for the sender to check a recipient's fingerprint before sending, there
+is currently no intuitive way for recipients to check the fingerprint of the sender of a given email
+to verify the claimed authorship. Support for this use case is also upcoming.
 
 Beyond key management, Zoom Mail Service does not make any guarantees regarding the following
 security properties:

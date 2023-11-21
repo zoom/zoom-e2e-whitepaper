@@ -2,12 +2,15 @@
 All notable changes to this project will be documented in this file.
 
 
+## [v4.3] - 2023-11-21
+### Added
+- Clarified in which circumstances emails might not be end-to-end encrypted
+
 ## [v4.2] - 2023-08-21
 ### Added
 - Description of account escrow using escrow admin users and escrow devices.
 ### Removed
 - Escrow using backup keys is removed, now that account escrow is available.
-
 
 ## [v4.1] - 2023-03-27
 ### Added
