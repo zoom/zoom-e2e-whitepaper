@@ -35,6 +35,9 @@
 \newcommand{\ecdsasign}{{\sf \ecdsa}.\sign}
 \newcommand{\ecdsaverify}{{\sf \ecdsa}.\verify}
 
+\newcommand{\kyberkemenc}{{\sf Kyber}.\sf{KemEnc}}
+\newcommand{\kyberkemdec}{{\sf Kyber}.\sf{KemDec}}
+
 \newcommand{\vkzoomsign}{\vk}
 \newcommand{\skzoomsign}{\sk}
 \newcommand{\signaturezoomsign}{{\sf Sig}}
@@ -52,8 +55,12 @@
 \newcommand{\dhfunced}{{\sf DH}_{\sf 25519}}
 \newcommand{\dhfuncfips}{{\sf DH}_{\sf FIPS}}
 
+\newcommand{\kyber}{\sf Kyber}
+\newcommand{\sfbox}{\sf Box}
 \newcommand{\pkbox}{\pk_{{\sf \cbox}}}
 \newcommand{\skbox}{\sk_{{\sf \cbox}}}
+\newcommand{\pkkyber}{\pk_{{\sf Kyber}}}
+\newcommand{\skkyber}{\sk_{{\sf Kyber}}}
 \newcommand{\ciphertext}{C}
 \newcommand{\cboxkeygen}{{\sf \cbox}.\keygen}
 \newcommand{\cboxencrypt}{{\sf \cbox}.\enc}
@@ -61,12 +68,16 @@
 
 \newcommand{\pkboxR}{\pkbox^{\sf R}}
 \newcommand{\skboxS}{\skbox^{\sf S}}
+\newcommand{\pkkyberR}{\pkkyber^{\sf R}}
+\newcommand{\skkyberS}{\skkyber^{\sf S}}
 \newcommand{\pkedR}{\pked^{\sf R}}
 \newcommand{\skedS}{\sked^{\sf S}}
 \newcommand{\pkfipsR}{\pkfips^{\sf R}}
 \newcommand{\skfipsS}{\skfips^{\sf S}}
 \newcommand{\pkboxS}{\pkbox^{\sf S}}
 \newcommand{\skboxR}{\skbox^{\sf R}}
+\newcommand{\pkkyberS}{\pkkyber^{\sf S}}
+\newcommand{\skkyberR}{\skkyber^{\sf R}}
 \newcommand{\pkedS}{\pked^{\sf S}}
 \newcommand{\skedR}{\sked^{\sf R}}
 \newcommand{\pkfipsS}{\pkfips^{\sf S}}
@@ -82,6 +93,7 @@
 
 \newcommand{\HKDF}{{\sf HKDF}}
 \newcommand{\SHATWO}{{\sf SHA256}}
+\newcommand{\SHATHREE}{{\sf SHA3}}
 \newcommand{\HMACSHATWO}{\enm{\textsf{HMAC}_\SHATWO}}
 \newcommand{\meetingID}{{\sf meetingID}}
 \newcommand{\meetingUUID}{{\sf meetingUUID}}

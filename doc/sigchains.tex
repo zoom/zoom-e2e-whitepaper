@@ -2,7 +2,7 @@
 \label{subsec:sigchains}
 
 Both accounts and users have states that change over time. An account can change its identity
-provider or its ADN, and a user can change their email address or add and remove devices.
+provider, and a user can change their email address or add and remove devices.
 
 We need to keep track of states that change over time in a way that is auditable. To do so, we
 describe the sequence of changes in a data structure called a signed hashchain, or
@@ -79,8 +79,7 @@ Zoom devices, users, and accounts are each internally identified by unique immut
 called \deviceid, \userID, and \accountID respectively. The \deviceid is generated randomly for each
 new device, while the \userID and \accountID are assigned by the server.
 
-Each device, user, and account is also associated with more user-friendly (but mutable) identifiers:
-respectively, device names, email addresses, and ADNs.
+Devices and users are also associated with more user-friendly (but mutable) identifiers: respectively, device names and email addresses.
 
 Representing these different components and their relationships requires different types of
 sigchains:
@@ -90,10 +89,8 @@ sigchains:
     the user's email address, \accountID, and the set of their devices and their trust
     relationships.
 \item Email sigchains store, for each email address, the associated \userID.
-\item Account sigchains store, for each \accountID, both the ADN and identity provider associated
+\item Account sigchains store, for each \accountID, the identity provider associated
     with the account.
-\item ADN sigchains keep track of, for each domain name, the \accountID to which the domain is
-    associated.
 \item Membership sigchains keep track of, for each \accountID, the {\userID}s within the account.
 \end{enumerate}
 
@@ -104,9 +101,9 @@ associated with the same email address at the same time. Accordingly, some opera
 multiple chains to be updated at the same time.
 
 As detailed earlier, every Zoom user is part of an account. As potential optimizations, if this
-account only has a single user and doesn't have an ADN, then that user's sigchain might not mention
+account only has a single user, then that user's sigchain might not mention
 their \accountID, and there would be no corresponding account or membership sigchains until the
-account either gets another user or an ADN.
+account gets another user.
 
 \subsubsection{User Sigchains}
  \label{subsubsec:usersigchains}
@@ -308,10 +305,10 @@ Since users can change their email on the Zoom website, this link does not requi
 
 \subsubsection{Account Sigchains}
 
-Account sigchains consists of two kinds of links, which record the identity provider and ADN that
-each account is using. \textsf{IDPUpdate} links contain the domain name of the IDP (say
-\texttt{examplecorp.generic-idp.com}). IDPs should not use the same domain for multiple accounts
-to prevent equivocation of their attestations.
+Account sigchains consist of \textsf{IDPUpdate} links, which record the domain
+name of the account's IDP (say \texttt{examplecorp.generic-idp.com}). IDPs
+should not use the same domain for multiple accounts in order to prevent equivocation of
+their attestations.
 
 \begin{Verbatim}
 {
@@ -321,25 +318,6 @@ to prevent equivocation of their attestations.
   "accountID": "abef02...",
 
   "idpDomain": "examplecorp.generic-idp.com"
-}
-\end{Verbatim}
-
-\textsf{ADNChange} links associate an ADN with the account. Only the latest \textsf{ADNChange} link
-is considered valid, and each one corresponds to an \textsf{AccountIDChange} link in the appropriate
-ADN sigchain. If an account is no longer using an ADN, the \textsf{adnChange} section specifies ADN
-\texttt{null} and the other field is omitted.
-
-\begin{Verbatim}
-{
-  "sigchainType": "Account",
-  "linkType": "ADNChange",
-  ...
-  "accountID": "abef02...",
-
-  "adnChange": COMMIT({
-    "adn": "example.org",
-    "adnChainSequenceNumber": 9
-  })
 }
 \end{Verbatim}
 
@@ -362,28 +340,6 @@ disable escrow, the link should set the {\userID} to null with the other field o
 \end{Verbatim}
 
 Links in account sigchains do not require any signatures.
-
-\subsubsection{ADN Sigchains}
-
-ADN sigchains track which \accountID a specific Account Domain Name is associated with. There is
-only one type of link, \textsf{AccountIDChange}, which corresponds to and points to an
-\textsf{ADNChange} link in the account sigchain for the appropriate \accountID:
-
-\begin{Verbatim}
-{
-  "sigchainType": "ADN",
-  "linkType": "AccountIDChange",
-  ...
-  "adn": "example.org",
-
-  "accountIDChange": COMMIT({
-    "accountID": "873c34...",
-    "accountChainSequenceNumber": 29
-  })
-}
-\end{Verbatim}
-
-Links in ADN sigchains do not require any signatures.
 
 \subsubsection{Membership Sigchains}
 
@@ -428,7 +384,7 @@ Links in membership sigchains do not require any signatures.
 \label{subsec:fingerprints}
 A sigchain fingerprint summarizes a user's sigchains. It is constructed as a hash of the user's user
 sigchain and account sigchain tails (note that this includes the user's present and past email
-addresses, as well as the current ADN due to the reference in the account sigchain). Sigchain
+addresses). Sigchain
 fingerprints are useful in two contexts: to verify new devices before approving, and to verify the
 keys used to communicate with other users.
 

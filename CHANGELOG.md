@@ -1,6 +1,12 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [v4.4] - 2024-05-21
+### Added
+- Hybrid post-quantum cryptography for E2E meetings.
+
+### Removed
+- Account domain names (ADN), except for their application to Identity Provider Attestations.
 
 ## [v4.3] - 2023-11-21
 ### Added
@@ -14,7 +20,7 @@ All notable changes to this project will be documented in this file.
 
 ## [v4.1] - 2023-03-27
 ### Added
-- Description of "Okta Authentication for End-to-End Encryption", which supports Okta IDP attestations for E2EE Meetings 
+- Description of "Okta Authentication for End-to-End Encryption", which supports Okta IDP attestations for E2EE Meetings
 - Rotatable Zero-Knowledge Set citation in "Zoom Transparency Tree" section
 ### Changed
 - Improved E2EE meeting key rotation, leader participant list, and liveness.

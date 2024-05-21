@@ -2,7 +2,7 @@
 attestations that are issued by Okta and are displayed in the context of E2EE meetings.
 This feature is called ``Okta Authentication for End-to-End Encryption''.
 
-Accounts that have an ADN and a compatible identity provider\footnote{Compatible
+Accounts that have a compatible identity provider\footnote{Compatible
 identity providers need to support a custom extension of the OpenID Connect
 (OIDC) protocol which we describe below.} (IDP) are able to have the IDP vouch
 for their users' identities in a way that other Zoom users can independently
@@ -23,6 +23,12 @@ components:
 
 \subsection{Associating Accounts with Identity Providers}
 \label{subsec:adnToIdp}
+Each account will be able to set a domain name that represents users of the account, which we call
+Account Domain Name (ADN). Domain names make good identifiers because they are unique (while for
+example two companies with the same name might exist in two countries), and many users are already
+familiar with them. Only a single account at a time can use a domain name as their ADN, but account
+administrators can change their ADN as needed.
+
 In order to associate an account to its IDP, the account's ADN hosts a DNS
 TXT record, per cloud, pointing to the corresponding IDP domain. Specifying the
 cloud identifier in the record supports ADNs configuring different IDPs for

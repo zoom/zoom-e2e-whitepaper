@@ -10,6 +10,7 @@ reflect its expanded scope. We still value feedback, recommendation and correcti
 to post them under [Issues](https://github.com/zoom/zoom-e2e-whitepaper/issues).
 
 ## Timeline
+- **21 May 2024**: [Version 4.4](./archive/zoom_e2e_v4_4.pdf) was published.
 - **21 November 2023**: [Version 4.3](./archive/zoom_e2e_v4_3.pdf) was published.
 - **21 August 2023**: [Version 4.2](./archive/zoom_e2e_v4_2.pdf) was published.
 - **27 March 2023**: [Version 4.1](./archive/zoom_e2e_v4_1.pdf) was published.

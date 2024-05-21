@@ -83,56 +83,36 @@ future updates.
 
 This section describes how we could display the identity of a Zoom user to others in various
 products. Because cryptographic keys are not easy to read, compare, or keep track of, we only show
-human-readable identifiers in the user interface. A user's set of identifiers consists of three
+human-readable identifiers in the user interface. A user's set of identifiers consists of two
 components:
 
 \begin{enumerate}
 \item A Cloud Identifier, which represents the cloud infrastructure a user's information is hosted
 on (omitted if the user is on the Zoom commercial cloud)
-\item An Account Domain Name (ADN), which identifies the account that the user is part of, where
-applicable. Before the ZTT (Section~\ref{sec:ztt}) is deployed, the ADN will only be displayed for
-users whose identities are vouched for by a trusted third-party IDP
-(Section~\ref{sec:idpattestations}).
 \item
-    An email address, which can be used to distinguish individual users within the account
+    An email address
 \end{enumerate}
 
 Here are a few examples of how a user's identifiers can be displayed to another user:
 
 \begin{multicols}{2}
 John Smith \\
-\texttt{example.com} (\texttt{jsmith@example.net})
+\texttt{jsmith@example.net}
 
 \columnbreak
 
-The display name, ``John Smith,'' is freely chosen and not authenticated. \texttt{example.com} is the
-ADN\@. Note that the email domain, \texttt{example.net}, can differ from the ADN\@.
+The display name, ``John Smith,'' is freely chosen and not authenticated.
 \end{multicols}
 
 \begin{multicols}{2}
 Lucy Lee \\
-\texttt{example.org} (\texttt{lucy.lee@example.org}) \\ \textbf{GOV}
+\texttt{lucy.lee@example.org} \\ \textbf{GOV}
 
 \columnbreak
 
 Since the \texttt{example.org} company works with the US government, their identities and keys are
 hosted on the separate Zoom for Government Cloud, and this is noted in the UI.
 \end{multicols}
-
-\begin{multicols}{2}
-Anna Smith \\
-\texttt{example.com}
-
-\columnbreak
-
-Anna might decide not to disclose her email address but still be identified as a member of the
-\texttt{example.com} account. In this case, although the user's email address would not be revealed,
-their devices' long-term cryptographic public keys could be leveraged by a determined attacker to
-ascertain when they have interacted with the same device multiple times, even when the display name
-is altered.
-\end{multicols}
-
-\clearpage
 
 \begin{multicols}{2}
 Richard Roe
@@ -144,35 +124,9 @@ other than the freely-chosen display name. Since they generate fresh long-term k
 aforementioned tracing attack is not possible.
 \end{multicols}
 
-\begin{multicols}{2}
-Mike Doe \\
-(\texttt{mike.doe@example.com})
-
-\columnbreak
-
-Mike is associated with an email address but not an ADN.
-\end{multicols}
-
-\subsubsection{Identifying Accounts}\label{subsubsec:adn}
-
-Accounts on Zoom can be optionally identified using a domain name, which we call the Account Domain
-Name (ADN). Domain names make good identifiers because they are unique (while for example two
-companies with the same name might exist in two countries), and many users are already familiar with
-them.
-
-To set the ADN, an account administrator may choose one of the account's Associated Domains.
-Associated Domains is a Zoom feature where an account admin can prove ownership of domain names
-(e.g. by adding a specific DNS record, adding a header tag to the home page, or hosting a file at a
-specific location on the domain) for the purposes of account and user management. Domain names
-consist of alphanumeric characters and hyphens. 
-
-Only a single account at a time can use a domain name as their ADN. Account administrators are
-allowed to change their ADN if needed. In the future, Zoom may provide a new dedicated subdomain as
-an option for accounts to use as the ADN.
-
 \subsubsection{Identifying Users}
 
-Zoom users are also identified by email address. Emails (unlike names) are unique, and they
+Zoom users are identified by email address. Emails (unlike names) are unique, and they
 sometimes represent people better than the legal name held in a company's HR system. Most users
 already have email addresses they are associated with, such as the one they use to log in. Zoom Mail
 Service (see Section~\ref{sec:email}) also issues users a dedicated email address upon signup. For
