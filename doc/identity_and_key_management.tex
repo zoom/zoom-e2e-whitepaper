@@ -66,7 +66,11 @@ model allows a user's devices to communicate amongst themselves in addition to s
 communicating with other users. When a device, logged in for a given user, is first used for a
 feature requiring cryptographic identity, it automatically generates encryption and signing key
 pairs, a process called \textit{provisioning}. These device key pairs will then be used to negotiate
-additional encryption key pairs shared between the users' devices.
+additional encryption key pairs shared between the users' devices. We refer to the device keys and
+the other keys negotiated through them as \emph{Device Managed Keys}, and to features which encrypt
+content with these keys (like Restricted Voicemails and Zoom Mail Service) as using \emph{Device
+Managed Encryption}. The encryption can either be performed by other users' devices (potentially
+resulting in end-to-end encryption) or by the Zoom server.
 
 The components of a user's identity can change over time, and it is important to keep track of these
 changes so that they are auditable. For this purpose, we introduce a data structure called a signed

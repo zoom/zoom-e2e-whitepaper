@@ -1,6 +1,15 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [v4.5] - 2024-06-17
+### Added
+- Hybrid post-quantum cryptography for Zoom phone
+
+### Changed
+- Introduced terms "Device Managed Keys" and "Device Managed encryption"
+- Zoom Mail Service emails can be encrypted using end-to-end encryption, with device managed keys, or with server managed keys
+- Renamed "Advanced Encryption for Voicemail" to "Restricted Voicemails"
+
 ## [v4.4] - 2024-05-21
 ### Added
 - Hybrid post-quantum cryptography for E2E meetings.

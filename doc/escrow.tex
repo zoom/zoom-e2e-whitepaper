@@ -1,10 +1,10 @@
 \subsection{Account Escrow}
 \label{subsec:keyescrow}
 
-Some of the data that organizations store on the Zoom platform is encrypted with keys that are only
+Some of the data that organizations store on the Zoom platform is encrypted with Device Managed Encryption, where the secret keys are only
 known to the devices of the users authorized to access it; the data is not available to Zoom
-servers. For example, emails between active users of the Zoom Mail Service (Section~\ref{sec:email})
-and some phone calls between Zoom Phone clients (Section~\ref{subsec:phone}) are in most cases
+servers. For example, some emails between active users of the Zoom Mail Service (Section~\ref{sec:email})
+and some phone calls between Zoom Phone clients (Section~\ref{subsec:phone}) are
 encrypted using the sender and recipient's keys only. However, administrators of these organizations
 may also wish to have access to this data, for example, to protect against accidental data loss (if
 the account member loses their devices) or to support legal retention and discovery. We refer to
@@ -83,7 +83,7 @@ access to a specific user's data only after that user comes online to encrypt th
 EAs. Therefore, there may be unrecoverable gaps in the content that can be recovered for the
 escrowed users. To avoid this, we recommend account administrators to enable escrow before
 encryption features that depend on the key management infrastructure we describe (such as Zoom Mail
-Service and Advanced Encryption for Voicemail), to avoid turning escrow off and on, and to generate
+Service and Restricted Voicemails), to avoid turning escrow off and on, and to generate
 multiple EA backup keys and keep them in safe locations.
 
 \subsubsection{Users' Escrow Device Management}

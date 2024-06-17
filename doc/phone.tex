@@ -21,66 +21,68 @@ account, which greatly simplifies the protocol.
 
 E2EE Zoom Phone calls leverage the key management system from Sections~\ref{subsec:multidev} and
 \ref{subsec:clientkeys}, and the same cryptographic primitives as Zoom Meetings (described in
-Section~\ref{subsec:cryptoalgs}). Zoom Phone calls are identified with {\sf CallSessionID} instead
+Section~\ref{subsec:cryptoalgs})%
+\footnote{Post-quantum algorithm support for Zoom Phone was added in client version 6.1.0, and the post-quantum properties are achieved only as long as both the caller and callee use a supported client version. Otherwise, the standard protocol (described in previous versions of this whitepaper) will be used. Once enough time has been allowed for clients to upgrade and we enforce a sufficiently high minimum client version, we will stop supporting standard E2EE entirely.}. Zoom Phone calls are identified with {\sf CallSessionID} instead
 of $\meetingID$ and $\meetingUUID$.
 
 To join an E2E call, participants ask for signed statements from the Zoom server over their ID and
 long-term key, just as in Zoom meetings (described in Section~\ref{subsubsec:servercert}). They also
-generate per-call ephemeral DH keys $(\pk_i, \sk_i)$, sign them with their device keys (similar to
-Section~\ref{subsubsec:partikeygen}), and send the key and signature to the other participant.
+generate per-call ephemeral DH and Kyber keys, sign them with their device keys (similar to
+Section~\ref{subsubsec:partikeygen}), and send the keys and signature to the other participant.
 
 The call is encrypted with a shared meeting key obtained from the DH key exchange of the clients'
-ephemeral keys (using the participants' UIDs and the {\sf CallSessionID} as context). Since the set
+ephemeral keys as well as a Kyber key encapsulation (using the participants' UIDs and public keys, and the {\sf CallSessionID} as context). Since the set
 of participants is fixed, the key does not rotate and does not have a sequence number, and there is
 also no Leader Participant List, heartbeats, or any analogue of the ``locked meeting'' feature.
 Participants still fetch each other's long-term public keys from the key server. Instead of the
 bulletin board, the server simply offers an interface for the two callers to message each other. At
 the moment, the only way to have an E2EE Zoom Phone call is to upgrade an in-progress call to use
-E2EE. When upgrading to E2EE, each client first sends its own signed ephemeral key, and when it
-receives the other party's key material, it responds with an explicit acknowledgement message. Once
-it receives the other party's acknowledgement, the client can start encrypting its own call stream.
+E2EE. When upgrading to E2EE, each client first sends its own signed ephemeral DH keys and Kyber public keys. Upon receiving the callee's key material, the caller generates an Kyber encapsulation ciphertext and sends it to the callee, along with a signature over the ciphertext itself and all the call identifiers and keys that are also hashed to compute the security code (as specified below). Upon receipt, the callee also responds with an explicit signature on the same material. At this point, both parties can combine the DH shared secret with the one resulting from the Kyber ciphertext to obtain a shared key, and use it to start encrypting the call streams.
+
+As in meetings, we combine the classical Diffie-Hellman key exchange with the post-quantum-secure Kyber768 key encapsulation, allowing the protocol to maintain security even if one algorithm is broken. Since our goal is to defend against an attacker who is currently recording all encrypted messages, and later acquires the ability to break classical cryptography, we do not currently use post-quantum signatures for authentication.
 
 \subsubsection{Phone Security Code}
 
 To defend against MitM attacks, Zoom Phone provides a ``phone security code'' that has a similar
 format to the meeting leader security code (Section~\ref{subsec:securitycode}), but that is derived
-from the ephemeral public keys of both parties. Since the set of participants is fixed, there is no
+from the transcript of the protocol and the key material of both parties. Since the set of participants is fixed, there is no
 concern about this code changing too frequently. The security code is computed as
-$$\mathsf{Digits}(\SHATWO(\context || \pk_{\sf Caller} || \pk_{\sf Callee} || {\sf
-CallSessionID})),$$ % 
+$$\mathsf{Digits}(\SHATWO(\context || vk_{\sf Caller} || vk_{\sf Callee} || \pk_{\sf Caller} || \pk_{\sf Callee} || pk^{\sf Kyber}_{\sf Callee} || c^{\sf Kyber} || {\sf
+CallSessionID})),$$ %
 where $\context$ is the string \texttt{"Zoombase-2-ClientOnly-KDF-PhoneSecurityCode"}. The user who
-initiated the call is designated the {\sf Caller}, and the other user is the {\sf Callee}.
+initiated the call is designated the {\sf Caller}, and the other user is the {\sf Callee}, and the hash includes both parties' long term signing keys $vk$, the ephemeral Diffie-Hellman keys $pk$, the callee's Kyber public key $pk^{\sf Kyber}_{\sf Callee}$ and the Kyber cyphertext $c^{\sf Kyber}$ from the caller.
 
-\subsection{Advanced Encryption for Voicemail}\label{subsec:voicemail} Zoom Phone users may receive
+\subsection{Restricted Voicemails}\label{subsec:voicemail} Zoom Phone users may receive
 voicemail sent from either mobile and landline phones using PSTN, or other Zoom Phone clients. By
 default, voicemail messages are received and recorded by Zoom servers, who encrypt them at rest with
 keys controlled by the Zoom infrastructure. 
 
-We also offer Advanced Encryption for Voicemail (AEV) as a more secure alternative: Zoom servers
-still receive and record the voicemail themselves, but they encrypt it for keys known only to the
-intended recipient's devices. We accomplish this using a voicemail-specific PUK subkey, as described
-in Section~\ref{subsubsec:puks}. Accordingly, AEV-encrypted voicemails can only be accessed by the
-devices belonging to the intended recipient with access to the PUK, i.e.\ devices created before the
-voicemail was generated, or (transitively) approved by such a device. We do not support retrieving
-these voicemail messages from PSTN, the Zoom website, or generic desk phone/SIP devices. 
+We also offer Restricted Voicemails as a more secure alternative leveraging Device Managed
+Encryption: Zoom servers still receive and record the voicemail themselves, but they encrypt it for
+keys known only to the intended recipient's devices. We accomplish this using a voicemail-specific
+PUK subkey, as described in Section~\ref{subsubsec:puks}. Accordingly, Restricted Voicemails can
+only be accessed by the devices belonging to the intended recipient with access to the PUK, i.e.\
+devices created before the voicemail was generated, or (transitively) approved by such a device. We
+do not support retrieving these voicemail messages from PSTN, the Zoom website, or generic desk
+phone/SIP devices. 
 
-Voicemails encrypted with AEV use a simplified version of the email encryption scheme
+Restricted Voicemails use a simplified version of the email encryption scheme
 (Section~\ref{subsec:emailprotocol}). Voicemail ciphertexts include the audio recording as the only
 encrypted piece, and there is always only a single (non-BCC) recipient. Email addresses are omitted
 as they are not relevant in the voicemail context, and there are no signatures as, even when sent
 among Zoom Phone users, it is the Zoom servers that are performing the recording and encryption.
 
 \subsubsection{Security Properties}
-The security properties of AEV largely follow from those of the key management layer that it is
+The security properties of Restricted Voicemails largely follow from those of the key management layer that it is
 built upon, as detailed in Section~\ref{sec:IdKmProps}. In particular, a malicious insider cannot
-decrypt any AEV-encrypted voicemail messages recorded before its compromise began (unless it also
+decrypt any Restricted Voicemail messages recorded before its compromise began (unless it also
 corrupts a device to obtain the necessary decryption keys). Key rotations happen as soon as possible
 when the set of devices changes and ensure that revoked devices cannot decrypt future voicemails,
 while we rely on the server to withhold past ciphertexts.
 
 We stress that, even if Zoom Phone servers delete plaintext voicemail messages as soon as possible
 after encryption (and cannot perform decryption afterwards), they have temporary access to the
-voicemails during recording, and therefore AEV has inherently weaker guarantees than end-to-end
+voicemails during recording, and therefore Restricted Voicemails have inherently weaker guarantees than end-to-end
 encryption. In addition to the confidentiality limitations, voicemail recipients cannot
 independently verify, and therefore rely on the Zoom servers for, the integrity of the voicemail
 recording (i.e.\ that it wasn't tampered with) and of any metadata such as the recording time,
@@ -91,7 +93,7 @@ metadata is not encrypted with per-user keys, and remains available to the serve
 service even after the audio recording is not.
 
 Since Zoom servers are performing the encryption and keeping track of everyone's keys, fingerprints
-are not displayed when sending or listening to an AEV voicemail message (but the user interface
-distinguishes between messages using standard and AEV encryption). Fingerprint verification is still
+are not displayed when sending or listening to a Restricted Voicemail message (but the user interface
+distinguishes between regular and Restricted Voicemails). Fingerprint verification is still
 useful during device approvals to prevent an attacker (including a recently compromised server) from
 gaining access to previously encrypted voicemails.
