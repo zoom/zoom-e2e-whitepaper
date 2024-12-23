@@ -34,11 +34,13 @@ Against these adversaries, colluding or working independently, we seek the follo
 
 \begin{description}
 	\item {\bf Confidentiality:} Only authorized participants should have access to the contents of
-	end-to-end encrypted communications. If the Zoom product supports removing users from encrypted
+	encrypted communications. If the Zoom product supports removing users from encrypted
 	communication channels, then those users should no longer have access to those communications
-	after they are removed.
+	after they are removed. We also aim to provide confidentiality against adversaries recording
+	encrypted data today, expecting to be able to break classical encryption at a later time using a
+	quantum computer. 	
 	\item {\bf Integrity:} Those who are not authorized participants should have no ability to
-	corrupt those end-to-end encrypted communications.
+	corrupt those encrypted communications.
 	\item {\bf Abuse Prevention:} When authorized participants engage in abusive behavior, there is
 	an effective mechanism to report them to Zoom's safety team, to help prevent further abuse.
 \end{description}
@@ -80,6 +82,11 @@ we deem out of scope, including:
 		availability of the service. Insiders can always refuse service to a specific user,
 		including when they try to perform security critical operations such as revoking a
 		compromised key to prevent further data from being encrypted and thus exposed.
+	\item{\bf Quantum Adversaries:} As detailed above, we aim to provide confidentiality for today's
+		encrypted data against future quantum computers. However, for performance reasons, and given
+		that the threat of a quantum computer is not considered imminent, we do not currently defend
+		against adversaries currently equipped with quantum computers powerful enough to break
+		classical cryptography, and so our signatures are not post-quantum secure.
 \end{description}
 
 In addition, we note that many Zoom products have rich feature sets and work on multiple platforms.

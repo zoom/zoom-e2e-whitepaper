@@ -189,10 +189,14 @@ device and a human-readable name:
   "deviceType": "PHONE",
   "deviceEd25519PublicKey": "ce8564...",
   "deviceX25519PublicKey": "ad7913...",
+  "deviceKyber768PublicKey": "82c6da...",
 
-  "userEmailX25519PublicKey": "f40b66...",
-  "userVoicemailX25519PublicKey": "d600fc...",
   "userX25519PublicKey": "c2cce1...",
+  "userKyber768PublicKey": "9ac7d1...",
+  "userEmailX25519PublicKey": "f40b66...",
+  "userEmailKyber768PublicKey": "57b8c7...",
+  "userVoicemailX25519PublicKey": "d600fc...",
+  "userVoicemailKyber768PublicKey": "23aad2...",
 
   "revokeDeviceIDs": [
      "ac98ad...",
@@ -202,12 +206,16 @@ device and a human-readable name:
 \end{Verbatim}
 
 This link specifies a device identifier (unique among the devices associated with this user), a
-signing public key, an encryption public key, as well as a device name and type. The device can be a
-virtual device, such as a backup key (see Section~\ref{subsubsec:backupkeys}).  Note that the device
-name is hidden by a commitment, because users other than the owner of the chain do not need to see
-it. In order to support reusing names, the device name includes an incrementing version component,
-which will be visible in the user interface. Device names allow the user to have a human-readable,
-unambiguous way to distinguish their devices.
+signing public key, an X25519 encryption public key, a Kyber768 encryption public key, as well as a
+device name and type. The device can be a virtual device, such as a backup key (see
+Section~\ref{subsubsec:backupkeys}).  Note that the device name is hidden by a commitment, because
+users other than the owner of the chain do not need to see it. In order to support reusing names,
+the device name includes an incrementing version component, which will be visible in the user
+interface. Device names allow the user to have a human-readable, unambiguous way to distinguish
+their devices.
+
+X25519 and Kyber768 public keys are used to perform post-quantum secure hybrid encryption, as
+described in Section~\ref{subsubsec:sigchainpqsecurity}.
 
 The link also specifies the new per-user key public keys. The encryptions of the new PUK seeds for
 older devices are not represented within the sigchain link, but are sent separately to the server,

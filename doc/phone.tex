@@ -72,6 +72,10 @@ encrypted piece, and there is always only a single (non-BCC) recipient. Email ad
 as they are not relevant in the voicemail context, and there are no signatures as, even when sent
 among Zoom Phone users, it is the Zoom servers that are performing the recording and encryption.
 
+As of Zoom client version 6.3.0, we do not use hybrid post-quantum secure encryption to encrypt
+restricted voicemails, but the functionality is planned to be implemented in the near future
+(Section \ref{subsubsec:sigchainpqsecurity}).
+
 \subsubsection{Security Properties}
 The security properties of Restricted Voicemails largely follow from those of the key management layer that it is
 built upon, as detailed in Section~\ref{sec:IdKmProps}. In particular, a malicious insider cannot

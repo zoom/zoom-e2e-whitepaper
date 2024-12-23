@@ -159,9 +159,11 @@ a user's identifiers with their device keys.
 Users have three main operations to change their set of valid devices:
 \begin{enumerate}
 \item $\deviceadd{}$, which adds a new device to the set. The new device generates a new long-term
-    signing key, which is used directly in some Zoom products (such as E2EE meetings) and also to
-    sign statements about the set, and an encryption key, which can be used to communicate with
-    other devices.
+    signing key, which is used directly in some Zoom products (such as to sign Zoom Mail Service
+   emails) and also to sign statements about the set, and a set of encryption keys, which can be
+    used to communicate with other devices. In particular, since client version 6.3.0, we use both
+    X25519 and Kyber768 keys in order to support post-quantum secure hybrid encryption, as detailed
+    in Section~\ref{subsubsec:sigchainpqsecurity}.
 \item $\devicerevoke{}$, which revokes the validity of a previously-added device. Revoked devices
     are still recorded as part of the set for auditing purposes, but new signatures from their keys
     are no longer considered valid, and the encryption keys they have access to are rotated as soon
@@ -280,14 +282,17 @@ includes $\zdev{f}$, it will also encrypt all the PUK seeds it knows about for t
 approving, which means $\zdev{f}$ can now decrypt data encrypted with keys created before $\zdev{f}$
 was introduced.
 
-Asymmetric encryption PUKs can be used to encrypt data for other users. If Alice encrypts a piece of
-content for Bob using his most recent asymmetric PUK, Bob can read the content on all devices added
-before the content was encrypted, as well as all the devices added afterwards, as long as those
-devices have been approved by an earlier one. The public keys corresponding to the asymmetric keys
-derived from the PUK seed are published in the user's sigchain
+Asymmetric encryption PUKs can be used to encrypt data for other users. In particular, since version
+6.3.0 of the Zoom client, we use both X25519 and Kyber768 keys to provide post-quantum secure
+hybrid encryption, as detailed in Section~\ref{subsubsec:sigchainpqsecurity}. If Alice encrypts a
+piece of content for Bob using his most recent asymmetric PUK, Bob can read the content on all
+devices added before the content was encrypted, as well as all the devices added afterwards, as long
+as those devices have been approved by an earlier one. The public keys corresponding to the
+asymmetric keys derived from the PUK seed are published in the user's sigchain
 (Section~\ref{subsubsec:usersigchains}).
 
-To generate a set of PUKs, devices:
+To generate a set of PUKs, devices use the following key derivation. Each invocation of HKDF
+uses a distinct context string.
 
 \begin{enumerate}
 \item
@@ -295,23 +300,19 @@ Generate a new 32-byte secret seed
 \item
 Use HKDF on the seed to generate different 32-byte keys:
 \begin{enumerate}
-\item
-private X25519, context \texttt{"Zoombase-2-ClientOnly-KDF-PerUserX25519"}
-\item
-email seed, context \texttt{"Zoombase-2-ClientOnly-KDF-PerUserEmailSeed"}
-\begin{enumerate}
-\item
-  private X25519 for email, context \\ \texttt{"Zoombase-2-ClientOnly-KDF-PerUserEmailX25519"}
-\end{enumerate}
-\item
-voicemail seed, context \texttt{"Zoombase-2-ClientOnly-KDF-PerUserVoicemailSeed"}
-\begin{enumerate}
-\item
-  private X25519 for voicemail, context  \\
-  \texttt{"Zoombase-2-ClientOnly-KDF-PerUserVoicemailX25519"}
-\end{enumerate}
-\item
-symmetric, context \texttt{"Zoombase-2-ClientOnly-KDF-PerUserSymmetricKey"}
+    \item X25519 keypair
+    \item Kyber768 keypair
+    \item email seed (using HKDF to derive the following 32-byte keys)
+    \begin{enumerate}
+        \item X25519 keypair for email
+        \item Kyber768 keypair for email
+    \end{enumerate}
+    \item voicemail seed (using HKDF to derive the following 32-byte keys)
+    \begin{enumerate}
+        \item X25519 keypair for voicemail
+        \item Kyber768 keypair for voicemail
+    \end{enumerate}
+    \item symmetric
 \end{enumerate}
 \end{enumerate}
 
@@ -428,7 +429,7 @@ devices, then data encrypted for their user will unrecoverable, and their accoun
 essentially unusable.
 
 The ``locked out'' user would have to create a new user account (note that Zoom allows email
-addresses to be re-assigned). To reduce the likelihood of this ``locked out '' scenario, the Zoom
+addresses to be re-assigned). To reduce the likelihood of this ``locked out'' scenario, the Zoom
 server requires users to create a backup key (see Section~\ref{subsubsec:backupkeys}) before
 entering lockdown mode. The server enforces that users in lockdown mode have at least one unrevoked
 device. One exception to this is that if an account disables escrow, the server will revoke all
@@ -617,6 +618,48 @@ Eventually, the ZTT might also ensure, under similar time synchronization assump
 everyone's view of all sigchains is not only consistent, but also relatively up-to-date, i.e.\ that
 any attempt to withhold updates beyond some reasonable tolerance bound is detected. This will ensure
 that the server is not able to trick senders into encrypting for out-of-date keys unnoticed.
+
+\subsubsection{Post-Quantum Secure Hybrid Encryption}
+\label{subsubsec:sigchainpqsecurity}
+We also aim to defend against an adversary who is recording encrypted data today, expecting to be
+able to break classical encryption at a later time using a quantum computer. Our protocol protects
+against this threat by using the Kyber post-quantum secure key encapsulation mechanism. We recognize
+that Kyber is a novel cryptographic algorithm and has been subject to less real-world scrutiny
+compared to classical cryptographic algorithms such as X25519. Thus, we use a hybrid approach,
+hashing the results of both a X25519 key exchange and the Kyber key encapsulation to derive shared
+symmetric encryption keys, so that even if Kyber turned out to be flawed, the security of the
+overall protocol would not otherwise be affected (beyond losing the post-quantum security). We
+stress that, as detailed in Section~\ref{sec:background_and_goals}, we do not currently defend
+against existing quantum adversaries, as our signatures are not post-quantum secure. 
+
+Clients use post-quantum secure hybrid encryption with device managed keys to exchange seeds and
+keys between each other, and for data encryption in products leveraging device-managed encryption
+such as Zoom Mail Service (Section~\ref{sec:zoommailservice}). The details of the key derivation and
+encryption format vary slightly by application, but are analogous to those used in the Zoom Meetings
+E2EE protocol (Section~\ref{subsubsec:meetingcrypto}).
+
+Post-quantum encryption support for device managed keys was added in Zoom client version 6.3.0. When
+upgrading, clients generate Kyber768 device encryption keys in addition to their X25519 device
+encryption keys, posting a $\devicekeyrotate$ link on the user's sigchain. Users also need to
+regenerate all of their backup keys, as pre-existing backup keys do not have Kyber keys associated
+with them. The user interface will indicate which devices and backup keys need to be updated to
+generate Kyber768 keys.
+
+The last of the user's devices to get upgraded will generate a new set of post-quantum per-user
+keys, and can send the corresponding secret keys to the other devices (using their post-quantum
+device keys, so that a post-quantum secret is always itself encrypted using post-quantum secure
+encryption). From then on, other users can leverage post-quantum secure hybrid encryption to
+communicate with this user, for example to send end-to-end encrypted emails. If a user hasn't
+completed the upgrade process yet, we fall back to only using X25519 to derive encryption keys (as
+detailed in previous versions of this whitepaper).
+
+The user interface will indicate which devices have not yet been upgraded to generate post-quantum
+encryption keys.
+
+Note that, if the account the user is part of has escrow enabled, the escrow virtual device on the
+user chain (Section~\ref{subsec:keyescrow}) needs to be rotated too. Therefore, escrow admins have
+to upgrade all of their devices (so that post-quantum per-user keys are available on the escrow
+admin sigchain) before their users can leverage post-quantum hybrid encryption. 
 
 \subsubsection{Integrity}
 Ensuring that all devices have a consistent view of a user's sigchain and that no extraneous devices

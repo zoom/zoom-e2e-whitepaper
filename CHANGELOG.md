@@ -1,6 +1,13 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [v4.6] - 2024-12-23
+### Added
+- Hybrid post-quantum cryptography for device-managed encryption and Zoom Mail Service
+
+### Changed
+- Renamed "Password-protected emails" to "Access-restricted emails"
+
 ## [v4.5] - 2024-06-17
 ### Added
 - Hybrid post-quantum cryptography for Zoom phone
