@@ -1,6 +1,16 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [v4.7] - 2025-06-24
+### Added
+- Clarified how in-meeting chat and in-meeting file sharing are encrypted.
+
+### Changed
+- Allow Join Before Host for E2EE meetings
+
+### Removed
+- Removed some details on outdated client app versions
+
 ## [v4.6] - 2024-12-23
 ### Added
 - Hybrid post-quantum cryptography for device-managed encryption and Zoom Mail Service

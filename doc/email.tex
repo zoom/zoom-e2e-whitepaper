@@ -34,12 +34,15 @@ does so and deletes the plaintext as soon as possible after it is received. The 
 any unencrypted copy of emails to external providers after they are successfully processed.
 
 Zoom Mail Client also supports external email providers, but here we only analyze the security of
-the product when leveraging our own Zoom Mail Service. In particular, the rest of this section focuses on emails which are encrypted using device managed keys (whether E2EE or not). Emails that are encrypted with server controlled keys follow the same standard practices as the rest of the user data which is held by Zoom, and are outside the scope of this document.
+the product when leveraging our own Zoom Mail Service. In particular, the rest of this section
+focuses on emails which are encrypted using device managed keys (whether E2EE or not). Emails that
+are encrypted with server controlled keys follow the same standard practices as the rest of the user
+data which is held by Zoom, and are outside the scope of this document.
 
 \textbf{Note:} Implementing end-to-end encryption in Zoom Mail Service is an ongoing process, and
-not all planned features and functionality in our design will be available as of version 5.12.8.
-This section describes the overall plan for the cryptographic design of Zoom Mail Service and
-identifies limitations that remain as of the current release.
+not all planned features and functionality in our design are currently available. This section
+describes the overall plan for the cryptographic design of Zoom Mail Service and identifies
+limitations that remain as of the latest release.
 
 \subsection{Encrypted Email Protocol for Device Managed Keys}
 \label{subsec:emailprotocol}
@@ -252,8 +255,9 @@ as such in the UI.
 Zoom Mail Service users can also have sensitive information in their user accounts that don't
 directly correspond to any email they sent or received. These include custom labels, folder names,
 and email signatures. The Zoom Mail Client can encrypt all of this information for the user's own
-most recent email PUK (again, depending on a variety of factors including account settings and whether keys are available), but the server still learns metadata such as the fact that two emails are in
-the same folder.
+most recent email PUK (again, depending on a variety of factors including account settings and
+whether keys are available), but the server still learns metadata such as the fact that two emails
+are in the same folder.
 
 Email drafts are encrypted and decrypted in essentially the same way as they would be when they are
 sent/received, except that the sender does not create recipient box ciphertexts for recipients
@@ -284,15 +288,18 @@ email account or on the mail delivery infrastructure beyond Zoom servers. Emails
 server controlled keys are also excluded.} or encrypted for the recipient's keys) before the
 compromise began.
 
-The user interface around fingerprints is still under active development (as of version 5.12.8, the
-product is still in beta). The current release only offers partial detection and prevention
-mechanisms against active attacks, which we are working to strengthen in the very near future. When composing an email, users can view the fingerprints for recipients with device managed keys and opt in to track them, so that they will be notified (only on that same device, as tracking is local) of any changes to that fingerprint and therefore the corresponding keys. 
-Specifically, assume a user has tracked a recipient's fingerprint in the past on a given client. If so, the client enforces that the email will be encrypted using the latest email PUK that is part of the sigchain corresponding to the tracked fingerprint. If
-the recipient's sigchain has since been updated, the send operation will fail so
-that the user has the opportunity to check the updated fingerprint. We will
-continue to develop a more robust and feature-rich experience around fingerprints and change
-notifications, as well as more automated solutions such as those involving the ZTT to reduce the
-burden on the user.
+The user interface around fingerprints is still under active development. The current release only
+offers partial detection and prevention mechanisms against active attacks, which we are working to
+strengthen in the very near future. When composing an email, users can view the fingerprints for
+recipients with device managed keys and opt in to track them, so that they will be notified (only on
+that same device, as tracking is local) of any changes to that fingerprint and therefore the
+corresponding keys. Specifically, assume a user has tracked a recipient's fingerprint in the past on
+a given client. If so, the client enforces that the email will be encrypted using the latest email
+PUK that is part of the sigchain corresponding to the tracked fingerprint. If the recipient's
+sigchain has since been updated, the send operation will fail so that the user has the opportunity
+to check the updated fingerprint. We will continue to develop a more robust and feature-rich
+experience around fingerprints and change notifications, as well as more automated solutions such as
+those involving the ZTT to reduce the burden on the user.
 
 Lastly, while it is possible for the sender to check a recipient's fingerprint before sending, there
 is currently no intuitive way for recipients to check the fingerprint of the sender of a given email
